@@ -11,6 +11,9 @@
 #   token_detail=true  (show exact token count like 64,000 - default)
 #   token_detail=false (show abbreviated tokens like 64.0k)
 #
+#   show_delta=true    (show token delta since last refresh like [+2,500] - default)
+#   show_delta=false   (disable delta display - saves file I/O on every refresh)
+#
 # When AC is enabled, 22.5% of context window is reserved for autocompact buffer.
 
 # Colors
@@ -51,9 +54,12 @@ fi
 # Sync this manually when you change settings in Claude Code via /config
 autocompact_enabled=true
 token_detail_enabled=true
-autocompact=""  # Will be set by sourced config
-token_detail="" # Will be set by sourced config
+show_delta_enabled=true
+autocompact=""   # Will be set by sourced config
+token_detail=""  # Will be set by sourced config
+show_delta=""    # Will be set by sourced config
 ac_info=""
+delta_info=""
 
 # Create config file with defaults if it doesn't exist
 if [[ ! -f ~/.claude/statusline.conf ]]; then
@@ -64,6 +70,10 @@ autocompact=true
 
 # Token display format
 token_detail=true
+
+# Show token delta since last refresh (adds file I/O on every refresh)
+# Disable if you don't need it to reduce overhead
+show_delta=true
 EOF
 fi
 
@@ -75,6 +85,9 @@ if [[ -f ~/.claude/statusline.conf ]]; then
     fi
     if [[ "$token_detail" == "false" ]]; then
         token_detail_enabled=false
+    fi
+    if [[ "$show_delta" == "false" ]]; then
+        show_delta_enabled=false
     fi
 fi
 
@@ -133,7 +146,38 @@ if [[ "$total_size" -gt 0 && "$current_usage" != "null" ]]; then
     fi
 
     context_info=" | ${ctx_color}${free_display} free (${free_pct}%)${RESET}"
+
+    # Calculate and display token delta if enabled
+    if [[ "$show_delta_enabled" == "true" ]]; then
+        # Use session_id for per-session state (avoids conflicts with parallel sessions)
+        session_id=$(echo "$input" | jq -r '.session_id // empty')
+        if [[ -n "$session_id" ]]; then
+            state_file=~/.claude/statusline.${session_id}.state
+        else
+            state_file=~/.claude/statusline.state
+        fi
+        has_prev=false
+        prev_tokens=0
+        if [[ -f "$state_file" ]]; then
+            has_prev=true
+            prev_tokens=$(cat "$state_file" 2>/dev/null)
+            prev_tokens=${prev_tokens:-0}
+        fi
+        # Calculate delta
+        delta=$((used_tokens - prev_tokens))
+        # Only show positive delta (and skip first run when no previous state)
+        if [[ "$has_prev" == "true" && "$delta" -gt 0 ]]; then
+            if [[ "$token_detail_enabled" == "true" ]]; then
+                delta_display=$(awk -v n="$delta" 'BEGIN { printf "%\047d", n }')
+            else
+                delta_display=$(awk "BEGIN {printf \"%.1fk\", $delta / 1000}")
+            fi
+            delta_info=" ${DIM}[+${delta_display}]${RESET}"
+        fi
+        # Save current usage for next time
+        echo "$used_tokens" > "$state_file"
+    fi
 fi
 
-# Output: [Model] directory | branch [changes] | XXk free (XX%) [AC]
-echo -e "${DIM}[${model}]${RESET} ${BLUE}${dir_name}${RESET}${git_info}${context_info}${ac_info}"
+# Output: [Model] directory | branch [changes] | XXk free (XX%) [+delta] [AC]
+echo -e "${DIM}[${model}]${RESET} ${BLUE}${dir_name}${RESET}${git_info}${context_info}${delta_info}${ac_info}"

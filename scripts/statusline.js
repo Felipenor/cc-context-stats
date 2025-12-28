@@ -12,6 +12,9 @@
  *   token_detail=true  (show exact token count like 64,000 - default)
  *   token_detail=false (show abbreviated tokens like 64.0k)
  *
+ *   show_delta=true    (show token delta since last refresh like [+2,500] - default)
+ *   show_delta=false   (disable delta display - saves file I/O on every refresh)
+ *
  * When AC is enabled, 22.5% of context window is reserved for autocompact buffer.
  */
 
@@ -69,6 +72,7 @@ function readConfig() {
     const config = {
         autocompact: true, // Default: enabled
         tokenDetail: true, // Default: show exact count
+        showDelta: true, // Default: show token delta
     };
     const configPath = path.join(os.homedir(), '.claude', 'statusline.conf');
 
@@ -84,6 +88,10 @@ autocompact=true
 
 # Token display format
 token_detail=true
+
+# Show token delta since last refresh (adds file I/O on every refresh)
+# Disable if you don't need it to reduce overhead
+show_delta=true
 `;
             fs.writeFileSync(configPath, defaultConfig);
         } catch {
@@ -106,6 +114,8 @@ token_detail=true
                 config.autocompact = valueTrimmed !== 'false';
             } else if (keyTrimmed === 'token_detail') {
                 config.tokenDetail = valueTrimmed !== 'false';
+            } else if (keyTrimmed === 'show_delta') {
+                config.showDelta = valueTrimmed !== 'false';
             }
         }
     } catch {
@@ -141,10 +151,12 @@ process.stdin.on('end', () => {
     const config = readConfig();
     const autocompactEnabled = config.autocompact;
     const tokenDetail = config.tokenDetail;
+    const showDelta = config.showDelta;
 
     // Context window calculation
     let contextInfo = '';
     let acInfo = '';
+    let deltaInfo = '';
     const totalSize = data.context_window?.context_window_size || 0;
     const currentUsage = data.context_window?.current_usage;
 
@@ -197,10 +209,44 @@ process.stdin.on('end', () => {
         }
 
         contextInfo = ` | ${ctxColor}${freeDisplay} free (${freePct.toFixed(1)}%)${RESET}`;
+
+        // Calculate and display token delta if enabled
+        if (showDelta) {
+            // Use session_id for per-session state (avoids conflicts with parallel sessions)
+            const sessionId = data.session_id;
+            const stateFileName = sessionId ? `statusline.${sessionId}.state` : 'statusline.state';
+            const stateFile = path.join(os.homedir(), '.claude', stateFileName);
+            let hasPrev = false;
+            let prevTokens = 0;
+            try {
+                if (fs.existsSync(stateFile)) {
+                    hasPrev = true;
+                    const content = fs.readFileSync(stateFile, 'utf8').trim();
+                    prevTokens = parseInt(content, 10) || 0;
+                }
+            } catch {
+                prevTokens = 0;
+            }
+            // Calculate delta
+            const delta = usedTokens - prevTokens;
+            // Only show positive delta (and skip first run when no previous state)
+            if (hasPrev && delta > 0) {
+                const deltaDisplay = tokenDetail
+                    ? delta.toLocaleString('en-US')
+                    : `${(delta / 1000).toFixed(1)}k`;
+                deltaInfo = ` ${DIM}[+${deltaDisplay}]${RESET}`;
+            }
+            // Save current usage for next time
+            try {
+                fs.writeFileSync(stateFile, String(usedTokens));
+            } catch {
+                // Ignore errors
+            }
+        }
     }
 
-    // Output: [Model] directory | branch [changes] | XXk free (XX%) [AC]
+    // Output: [Model] directory | branch [changes] | XXk free (XX%) [+delta] [AC]
     console.log(
-        `${DIM}[${model}]${RESET} ${BLUE}${dirName}${RESET}${gitInfo}${contextInfo}${acInfo}`
+        `${DIM}[${model}]${RESET} ${BLUE}${dirName}${RESET}${gitInfo}${contextInfo}${deltaInfo}${acInfo}`
     );
 });

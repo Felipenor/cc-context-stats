@@ -14,6 +14,7 @@ Custom status line scripts for [Claude Code](https://claude.com/claude-code).
 - `main` - Git branch (magenta)
 - `[3]` - Uncommitted changes count (cyan)
 - `64,000 free (32.0%)` - Available context tokens (green >50%, yellow >25%, red ≤25%)
+- `[+2,500]` - Token delta since last refresh
 - `[AC:45k]` - Autocompact buffer size
 
 ## Installation
@@ -94,6 +95,11 @@ autocompact=false  # When autocompact is disabled via /config
 # Token display format
 token_detail=true  # (default) Show exact token count: 64,000 free
 token_detail=false # Show abbreviated tokens: 64.0k free
+
+# Show token delta since last refresh (adds file I/O on every refresh)
+# Disable if you don't need it to reduce overhead
+show_delta=true    # (default) Show delta like [+2,500]
+show_delta=false   # Disable delta display
 ```
 
 ### Autocompact Display
@@ -105,8 +111,16 @@ token_detail=false # Show abbreviated tokens: 64.0k free
 
 | Setting | Display |
 |---------|---------|
-| `token_detail=true` (default) | `64,000 free (32.0%)` |
-| `token_detail=false` | `64.0k free (32.0%)` |
+| `token_detail=true` (default) | `64,000 free (32.0%)` `[+2,500]` |
+| `token_detail=false` | `64.0k free (32.0%)` `[+2.5k]` |
+
+### Token Delta
+
+The `[+X,XXX]` indicator shows how many tokens were consumed since the last status line refresh. This helps you track token usage during your session.
+
+- Only positive deltas are shown (when usage increases)
+- First run after starting Claude Code shows no delta (no baseline yet)
+- Each session has its own state file (`~/.claude/statusline.<session_id>.state`) to avoid conflicts when running multiple Claude Code sessions in parallel
 
 ## Available Scripts
 

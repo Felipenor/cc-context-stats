@@ -12,6 +12,9 @@ Create/edit ~/.claude/statusline.conf and set:
   token_detail=true  (show exact token count like 64,000 - default)
   token_detail=false (show abbreviated tokens like 64.0k)
 
+  show_delta=true    (show token delta since last refresh like [+2,500] - default)
+  show_delta=false   (disable delta display - saves file I/O on every refresh)
+
 When AC is enabled, 22.5% of context window is reserved for autocompact buffer.
 """
 
@@ -71,6 +74,7 @@ def read_config():
     config = {
         "autocompact": True,  # Default: enabled
         "token_detail": True,  # Default: show exact count
+        "show_delta": True,  # Default: show token delta
     }
     config_path = os.path.expanduser("~/.claude/statusline.conf")
 
@@ -85,6 +89,10 @@ autocompact=true
 
 # Token display format
 token_detail=true
+
+# Show token delta since last refresh (adds file I/O on every refresh)
+# Disable if you don't need it to reduce overhead
+show_delta=true
 """
                 )
         except Exception:
@@ -104,6 +112,8 @@ token_detail=true
                     config["autocompact"] = value != "false"
                 elif key == "token_detail":
                     config["token_detail"] = value != "false"
+                elif key == "show_delta":
+                    config["show_delta"] = value != "false"
     except Exception:
         pass
     return config
@@ -129,10 +139,12 @@ def main():
     config = read_config()
     autocompact_enabled = config["autocompact"]
     token_detail = config["token_detail"]
+    show_delta = config["show_delta"]
 
     # Context window calculation
     context_info = ""
     ac_info = ""
+    delta_info = ""
     total_size = data.get("context_window", {}).get("context_window_size", 0)
     current_usage = data.get("context_window", {}).get("current_usage")
 
@@ -182,8 +194,41 @@ def main():
 
         context_info = f" | {ctx_color}{free_display} free ({free_pct:.1f}%){RESET}"
 
-    # Output: [Model] directory | branch [changes] | XXk free (XX%) [AC]
-    print(f"{DIM}[{model}]{RESET} {BLUE}{dir_name}{RESET}{git_info}{context_info}{ac_info}")
+        # Calculate and display token delta if enabled
+        if show_delta:
+            # Use session_id for per-session state (avoids conflicts with parallel sessions)
+            session_id = data.get("session_id")
+            if session_id:
+                state_file = os.path.expanduser(f"~/.claude/statusline.{session_id}.state")
+            else:
+                state_file = os.path.expanduser("~/.claude/statusline.state")
+            has_prev = False
+            prev_tokens = 0
+            try:
+                if os.path.exists(state_file):
+                    has_prev = True
+                    with open(state_file) as f:
+                        prev_tokens = int(f.read().strip() or 0)
+            except Exception:
+                prev_tokens = 0
+            # Calculate delta
+            delta = used_tokens - prev_tokens
+            # Only show positive delta (and skip first run when no previous state)
+            if has_prev and delta > 0:
+                if token_detail:
+                    delta_display = f"{delta:,}"
+                else:
+                    delta_display = f"{delta / 1000:.1f}k"
+                delta_info = f" {DIM}[+{delta_display}]{RESET}"
+            # Save current usage for next time
+            try:
+                with open(state_file, "w") as f:
+                    f.write(str(used_tokens))
+            except Exception:
+                pass
+
+    # Output: [Model] directory | branch [changes] | XXk free (XX%) [+delta] [AC]
+    print(f"{DIM}[{model}]{RESET} {BLUE}{dir_name}{RESET}{git_info}{context_info}{delta_info}{ac_info}")
 
 
 if __name__ == "__main__":
