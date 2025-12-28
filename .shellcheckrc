@@ -1,0 +1,10 @@
+# ShellCheck configuration for claude-statusline project
+
+# Set default shell to bash
+shell=bash
+
+# Enable external sources for sourcing config files
+external-sources=true
+
+# Severity: error, warning, info, style
+severity=style

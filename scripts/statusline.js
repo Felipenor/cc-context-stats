@@ -41,7 +41,9 @@ function getGitInfo(projectDir) {
             stdio: ['pipe', 'pipe', 'pipe']
         }).trim();
 
-        if (!branch) return '';
+        if (!branch) {
+            return '';
+        }
 
         // Count changes
         const status = execSync('git --no-optional-locks status --porcelain', {

@@ -13,9 +13,9 @@ When AC is enabled, 22.5% of context window is reserved for autocompact buffer.
 """
 
 import json
-import sys
 import os
 import subprocess
+import sys
 
 # ANSI Colors
 BLUE = '\033[0;34m'
@@ -54,7 +54,7 @@ def get_git_info(project_dir):
             capture_output=True,
             text=True
         )
-        changes = len([l for l in result.stdout.split('\n') if l.strip()])
+        changes = len([line for line in result.stdout.split('\n') if line.strip()])
 
         if changes > 0:
             return f" | {MAGENTA}{branch}{RESET} {CYAN}[{changes}]{RESET}"
@@ -70,7 +70,7 @@ def read_autocompact_setting():
         return True  # Default: enabled
 
     try:
-        with open(config_path, 'r') as f:
+        with open(config_path) as f:
             for line in f:
                 line = line.strip()
                 if line.startswith('#') or '=' not in line:

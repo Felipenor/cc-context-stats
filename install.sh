@@ -54,7 +54,7 @@ select_script() {
     echo "  4) python   - Python version (full featured)"
     echo "  5) node     - Node.js version (full featured)"
     echo
-    read -p "Select script [1-5, default: 3]: " choice
+    read -rp "Select script [1-5, default: 3]: " choice
 
     case ${choice:-3} in
         1) SCRIPT_SRC="$SCRIPT_DIR/scripts/statusline-minimal.sh"; SCRIPT_NAME="statusline.sh" ;;
@@ -111,7 +111,7 @@ update_settings() {
         cp "$SETTINGS_FILE" "$SETTINGS_FILE.backup"
 
         # Add/update statusLine configuration
-        SCRIPT_PATH="~/.claude/$SCRIPT_NAME"
+        SCRIPT_PATH="$HOME/.claude/$SCRIPT_NAME"
         jq --arg cmd "$SCRIPT_PATH" '.statusLine = {"type": "command", "command": $cmd}' \
             "$SETTINGS_FILE.backup" > "$SETTINGS_FILE"
 

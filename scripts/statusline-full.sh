@@ -47,8 +47,10 @@ fi
 # Autocompact setting - read from ~/.claude/statusline.conf
 # Sync this manually when you change autocompact in Claude Code via /config
 autocompact_enabled=true
+autocompact=""  # Will be set by sourced config
 ac_info=""
 if [[ -f ~/.claude/statusline.conf ]]; then
+    # shellcheck source=/dev/null
     source ~/.claude/statusline.conf
     if [[ "$autocompact" == "false" ]]; then
         autocompact_enabled=false

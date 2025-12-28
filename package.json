@@ -1,0 +1,37 @@
+{
+  "name": "claude-statusline",
+  "version": "1.0.0",
+  "description": "Custom status line scripts for Claude Code",
+  "main": "scripts/statusline.js",
+  "private": true,
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint scripts/statusline.js",
+    "lint:fix": "eslint scripts/statusline.js --fix",
+    "format": "prettier --write 'scripts/*.js' '*.json' '*.md'",
+    "format:check": "prettier --check 'scripts/*.js' '*.json' '*.md'"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "statusline",
+    "terminal",
+    "cli"
+  ],
+  "author": "luongnv89",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/luongnv89/claude-statusline.git"
+  },
+  "devDependencies": {
+    "eslint": "^8.56.0",
+    "jest": "^29.7.0",
+    "prettier": "^3.2.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
