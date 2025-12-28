@@ -112,18 +112,18 @@ if [[ "$total_input_tokens" -gt 0 || "$total_output_tokens" -gt 0 ]]; then
     in_k=$(awk "BEGIN {printf \"%.0f\", $total_input_tokens / 1000}")
     out_k=$(awk "BEGIN {printf \"%.0f\", $total_output_tokens / 1000}")
 
-    # Build token info string
-    token_str="${in_k}k in/${out_k}k out"
-
-    # Add cache info if available
+    # Build token info string with colors: in=blue, out=magenta, cache=cyan
+    # Format: [in:72k,out:83k,cache:41k]
     cache_total=$((cache_creation_tokens + cache_read_tokens))
     if [[ "$cache_total" -gt 0 ]]; then
         cache_k=$(awk "BEGIN {printf \"%.0f\", $cache_total / 1000}")
-        token_str="${token_str}/${cache_k}k cache"
+        token_str="${DIM}[${RESET}${BLUE}in:${in_k}k${RESET}${DIM},${RESET}${MAGENTA}out:${out_k}k${RESET}${DIM},${RESET}${CYAN}cache:${cache_k}k${RESET}${DIM}]${RESET}"
+    else
+        token_str="${DIM}[${RESET}${BLUE}in:${in_k}k${RESET}${DIM},${RESET}${MAGENTA}out:${out_k}k${RESET}${DIM}]${RESET}"
     fi
 
-    token_info=" | ${DIM}${token_str}${RESET}"
+    token_info=" | ${token_str}"
 fi
 
-# Output: [Model] directory | branch [changes] | XXk free (XX%) [AC] | Xk in/Xk out/Xk cache
+# Output: [Model] directory | branch [changes] | XXk free (XX%) [AC] | [in:Xk,out:Xk,cache:Xk]
 echo -e "${DIM}[${model}]${RESET} ${BLUE}${dir_name}${RESET}${git_info}${context_info}${ac_info}${token_info}"

@@ -1,30 +1,40 @@
 #!/bin/bash
+# Original status line - alternative format with token metrics
+# Usage: Copy to ~/.claude/statusline.sh and make executable
+
+# Colors
+BLUE='\033[0;34m'
+MAGENTA='\033[0;35m'
+CYAN='\033[0;36m'
+GREEN='\033[0;32m'
+DIM='\033[2m'
+RESET='\033[0m'
 
 # Read JSON input from stdin
 input=$(cat)
 
-# DEBUG: Write raw JSON to file for inspection
-echo "$input" > /tmp/statusline_debug.json
-
 # Extract information from JSON
 cwd=$(echo "$input" | jq -r '.workspace.current_dir')
 project_dir=$(echo "$input" | jq -r '.workspace.project_dir')
-model=$(echo "$input" | jq -r '.model.display_name')
-
-# Get directory name
+model=$(echo "$input" | jq -r '.model.display_name // "Claude"')
 dir_name=$(basename "$cwd")
 
 # Git information (skip optional locks)
+git_info=""
 if [[ -d "$project_dir/.git" ]]; then
     git_branch=$(cd "$project_dir" 2>/dev/null && git --no-optional-locks rev-parse --abbrev-ref HEAD 2>/dev/null)
     git_status_count=$(cd "$project_dir" 2>/dev/null && git --no-optional-locks status --porcelain 2>/dev/null | wc -l | tr -d ' ')
-else
-    git_branch=""
-    git_status_count="0"
+
+    if [[ -n "$git_branch" ]]; then
+        if [[ "$git_status_count" != "0" ]]; then
+            git_info=" ${MAGENTA}${git_branch}${RESET} ${CYAN}●${git_status_count}${RESET}"
+        else
+            git_info=" ${MAGENTA}${git_branch}${RESET}"
+        fi
+    fi
 fi
 
 # Calculate context window - show remaining free space
-# /context shows: Free space = context_window_size - (all used tokens) - autocompact_buffer
 context_free=""
 total_size=$(echo "$input" | jq -r '.context_window.context_window_size // 0')
 current_usage=$(echo "$input" | jq '.context_window.current_usage')
@@ -50,32 +60,30 @@ if [[ "$total_size" -gt 0 && "$current_usage" != "null" ]]; then
 
     # Format tokens in k
     free_k=$((free_tokens / 1000))
-    context_free="${free_k}k (${free_pct}%)"
+    context_free=" ${GREEN}[${free_k}k free (${free_pct}%)]${RESET}"
 fi
 
-# Build status line with colors (dimmed for terminal display)
-output=""
+# Token metrics
+token_info=""
+total_input_tokens=$(echo "$input" | jq -r '.context_window.total_input_tokens // 0')
+total_output_tokens=$(echo "$input" | jq -r '.context_window.total_output_tokens // 0')
+cache_creation_tokens=$(echo "$input" | jq -r '.context_window.current_usage.cache_creation_input_tokens // 0')
+cache_read_tokens=$(echo "$input" | jq -r '.context_window.current_usage.cache_read_input_tokens // 0')
 
-# Directory in blue
-output+=$(printf "\033[1;34m[%s]\033[0m" "$dir_name")
+if [[ "$total_input_tokens" -gt 0 || "$total_output_tokens" -gt 0 ]]; then
+    in_k=$(awk "BEGIN {printf \"%.0f\", $total_input_tokens / 1000}")
+    out_k=$(awk "BEGIN {printf \"%.0f\", $total_output_tokens / 1000}")
 
-# Git branch in magenta
-if [[ -n "$git_branch" ]]; then
-    output+=$(printf " \033[1;35m%s\033[0m" "$git_branch")
-
-    # Git status count in cyan if there are changes
-    if [[ "$git_status_count" != "0" ]]; then
-        output+=$(printf " \033[36m●%s\033[0m" "$git_status_count")
+    # Build token info string with colors: in=blue, out=magenta, cache=cyan
+    # Format: [in:72k,out:83k,cache:41k]
+    cache_total=$((cache_creation_tokens + cache_read_tokens))
+    if [[ "$cache_total" -gt 0 ]]; then
+        cache_k=$(awk "BEGIN {printf \"%.0f\", $cache_total / 1000}")
+        token_info=" ${DIM}[${RESET}${BLUE}in:${in_k}k${RESET}${DIM},${RESET}${MAGENTA}out:${out_k}k${RESET}${DIM},${RESET}${CYAN}cache:${cache_k}k${RESET}${DIM}]${RESET}"
+    else
+        token_info=" ${DIM}[${RESET}${BLUE}in:${in_k}k${RESET}${DIM},${RESET}${MAGENTA}out:${out_k}k${RESET}${DIM}]${RESET}"
     fi
 fi
 
-# Model in dim white
-output+=$(printf " \033[2m• %s\033[0m" "$model")
-
-# Context free space in green if available
-if [[ -n "$context_free" ]]; then
-    output+=$(printf " \033[1;32m[%s free]\033[0m" "$context_free")
-fi
-
-# Output the final status line
-echo "$output"
+# Output: [dir] branch ●changes • Model [Xk free (X%)] [in:Xk,out:Xk,cache:Xk]
+echo -e "${BLUE}[${dir_name}]${RESET}${git_info} ${DIM}• ${model}${RESET}${context_free}${token_info}"

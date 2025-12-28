@@ -169,20 +169,20 @@ process.stdin.on('end', () => {
         const inK = Math.floor(totalInputTokens / 1000);
         const outK = Math.floor(totalOutputTokens / 1000);
 
-        // Build token info string with colors
-        // Input: blue, Output: magenta, Cache: cyan
-        let tokenInfo = `${BLUE}${inK}k in${RESET}/${MAGENTA}${outK}k out${RESET}`;
-
-        // Add cache info if available
+        // Build token info string with colors: in=blue, out=magenta, cache=cyan
+        // Format: [in:72k,out:83k,cache:41k]
         const cacheTotal = cacheCreationTokens + cacheReadTokens;
+        let tokenInfo;
         if (cacheTotal > 0) {
             const cacheK = Math.floor(cacheTotal / 1000);
-            tokenInfo = `${tokenInfo}/${CYAN}${cacheK}k cache${RESET}`;
+            tokenInfo = `${DIM}[${RESET}${BLUE}in:${inK}k${RESET}${DIM},${RESET}${MAGENTA}out:${outK}k${RESET}${DIM},${RESET}${CYAN}cache:${cacheK}k${RESET}${DIM}]${RESET}`;
+        } else {
+            tokenInfo = `${DIM}[${RESET}${BLUE}in:${inK}k${RESET}${DIM},${RESET}${MAGENTA}out:${outK}k${RESET}${DIM}]${RESET}`;
         }
 
-        tokenMetrics = ` | ${DIM}${tokenInfo}${RESET}`;
+        tokenMetrics = ` | ${tokenInfo}`;
     }
 
-    // Output: [Model] directory | branch [changes] | XXk free (XX%) [AC] | Xk in/Xk out/Xk cache
+    // Output: [Model] directory | branch [changes] | XXk free (XX%) [AC] | [in:Xk,out:Xk,cache:Xk]
     console.log(`${DIM}[${model}]${RESET} ${BLUE}${dirName}${RESET}${gitInfo}${contextInfo}${acInfo}${tokenMetrics}`);
 });
