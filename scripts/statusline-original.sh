@@ -88,27 +88,5 @@ if [[ "$total_size" -gt 0 && "$current_usage" != "null" ]]; then
     context_free=" ${GREEN}[${free_k}k free (${free_pct}%)]${RESET}"
 fi
 
-# Token metrics
-token_info=""
-total_input_tokens=$(echo "$input" | jq -r '.context_window.total_input_tokens // 0')
-total_output_tokens=$(echo "$input" | jq -r '.context_window.total_output_tokens // 0')
-cache_creation_tokens=$(echo "$input" | jq -r '.context_window.current_usage.cache_creation_input_tokens // 0')
-cache_read_tokens=$(echo "$input" | jq -r '.context_window.current_usage.cache_read_input_tokens // 0')
-
-if [[ "$total_input_tokens" -gt 0 || "$total_output_tokens" -gt 0 ]]; then
-    in_k=$(awk "BEGIN {printf \"%.0f\", $total_input_tokens / 1000}")
-    out_k=$(awk "BEGIN {printf \"%.0f\", $total_output_tokens / 1000}")
-
-    # Build token info string with colors: in=blue, out=magenta, cache=cyan
-    # Format: [in:72k,out:83k,cache:41k]
-    cache_total=$((cache_creation_tokens + cache_read_tokens))
-    if [[ "$cache_total" -gt 0 ]]; then
-        cache_k=$(awk "BEGIN {printf \"%.0f\", $cache_total / 1000}")
-        token_info=" ${DIM}[${RESET}${BLUE}in:${in_k}k${RESET}${DIM},${RESET}${MAGENTA}out:${out_k}k${RESET}${DIM},${RESET}${CYAN}cache:${cache_k}k${RESET}${DIM}]${RESET}"
-    else
-        token_info=" ${DIM}[${RESET}${BLUE}in:${in_k}k${RESET}${DIM},${RESET}${MAGENTA}out:${out_k}k${RESET}${DIM}]${RESET}"
-    fi
-fi
-
-# Output: [dir] branch ●changes • Model [Xk free (X%)] [AC] [in:Xk,out:Xk,cache:Xk]
-echo -e "${BLUE}[${dir_name}]${RESET}${git_info} ${DIM}• ${model}${RESET}${context_free}${ac_info}${token_info}"
+# Output: [dir] branch ●changes • Model [Xk free (X%)] [AC]
+echo -e "${BLUE}[${dir_name}]${RESET}${git_info} ${DIM}• ${model}${RESET}${context_free}${ac_info}"

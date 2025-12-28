@@ -150,32 +150,8 @@ def main():
 
         context_info = f" | {ctx_color}{free_display} free ({free_pct:.1f}%){RESET}"
 
-    # Token metrics (without cost)
-    token_metrics = ""
-    total_input_tokens = data.get('context_window', {}).get('total_input_tokens', 0)
-    total_output_tokens = data.get('context_window', {}).get('total_output_tokens', 0)
-
-    # Get cache info from current_usage
-    cache_creation_tokens = data.get('context_window', {}).get('current_usage', {}).get('cache_creation_input_tokens', 0)
-    cache_read_tokens = data.get('context_window', {}).get('current_usage', {}).get('cache_read_input_tokens', 0)
-
-    if total_input_tokens > 0 or total_output_tokens > 0:
-        in_k = total_input_tokens // 1000
-        out_k = total_output_tokens // 1000
-
-        # Build token info string with colors: in=blue, out=magenta, cache=cyan
-        # Format: [in:72k,out:83k,cache:41k]
-        cache_total = cache_creation_tokens + cache_read_tokens
-        if cache_total > 0:
-            cache_k = cache_total // 1000
-            token_info = f"{DIM}[{RESET}{BLUE}in:{in_k}k{RESET}{DIM},{RESET}{MAGENTA}out:{out_k}k{RESET}{DIM},{RESET}{CYAN}cache:{cache_k}k{RESET}{DIM}]{RESET}"
-        else:
-            token_info = f"{DIM}[{RESET}{BLUE}in:{in_k}k{RESET}{DIM},{RESET}{MAGENTA}out:{out_k}k{RESET}{DIM}]{RESET}"
-
-        token_metrics = f" | {token_info}"
-
-    # Output: [Model] directory | branch [changes] | XXk free (XX%) [AC] | [in:Xk,out:Xk,cache:Xk]
-    print(f"{DIM}[{model}]{RESET} {BLUE}{dir_name}{RESET}{git_info}{context_info}{ac_info}{token_metrics}")
+    # Output: [Model] directory | branch [changes] | XXk free (XX%) [AC]
+    print(f"{DIM}[{model}]{RESET} {BLUE}{dir_name}{RESET}{git_info}{context_info}{ac_info}")
 
 
 if __name__ == '__main__':

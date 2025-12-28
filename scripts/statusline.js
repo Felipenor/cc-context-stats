@@ -164,33 +164,6 @@ process.stdin.on('end', () => {
         contextInfo = ` | ${ctxColor}${freeDisplay} free (${freePct.toFixed(1)}%)${RESET}`;
     }
 
-    // Token metrics (without cost)
-    let tokenMetrics = '';
-    const totalInputTokens = data.context_window?.total_input_tokens || 0;
-    const totalOutputTokens = data.context_window?.total_output_tokens || 0;
-
-    // Get cache info from current_usage
-    const cacheCreationTokens = data.context_window?.current_usage?.cache_creation_input_tokens || 0;
-    const cacheReadTokens = data.context_window?.current_usage?.cache_read_input_tokens || 0;
-
-    if (totalInputTokens > 0 || totalOutputTokens > 0) {
-        const inK = Math.floor(totalInputTokens / 1000);
-        const outK = Math.floor(totalOutputTokens / 1000);
-
-        // Build token info string with colors: in=blue, out=magenta, cache=cyan
-        // Format: [in:72k,out:83k,cache:41k]
-        const cacheTotal = cacheCreationTokens + cacheReadTokens;
-        let tokenInfo;
-        if (cacheTotal > 0) {
-            const cacheK = Math.floor(cacheTotal / 1000);
-            tokenInfo = `${DIM}[${RESET}${BLUE}in:${inK}k${RESET}${DIM},${RESET}${MAGENTA}out:${outK}k${RESET}${DIM},${RESET}${CYAN}cache:${cacheK}k${RESET}${DIM}]${RESET}`;
-        } else {
-            tokenInfo = `${DIM}[${RESET}${BLUE}in:${inK}k${RESET}${DIM},${RESET}${MAGENTA}out:${outK}k${RESET}${DIM}]${RESET}`;
-        }
-
-        tokenMetrics = ` | ${tokenInfo}`;
-    }
-
-    // Output: [Model] directory | branch [changes] | XXk free (XX%) [AC] | [in:Xk,out:Xk,cache:Xk]
-    console.log(`${DIM}[${model}]${RESET} ${BLUE}${dirName}${RESET}${gitInfo}${contextInfo}${acInfo}${tokenMetrics}`);
+    // Output: [Model] directory | branch [changes] | XXk free (XX%) [AC]
+    console.log(`${DIM}[${model}]${RESET} ${BLUE}${dirName}${RESET}${gitInfo}${contextInfo}${acInfo}`);
 });
