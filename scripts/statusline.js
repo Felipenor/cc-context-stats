@@ -38,7 +38,7 @@ function getGitInfo(projectDir) {
         const branch = execSync('git --no-optional-locks rev-parse --abbrev-ref HEAD', {
             cwd: projectDir,
             encoding: 'utf8',
-            stdio: ['pipe', 'pipe', 'pipe']
+            stdio: ['pipe', 'pipe', 'pipe'],
         }).trim();
 
         if (!branch) {
@@ -49,7 +49,7 @@ function getGitInfo(projectDir) {
         const status = execSync('git --no-optional-locks status --porcelain', {
             cwd: projectDir,
             encoding: 'utf8',
-            stdio: ['pipe', 'pipe', 'pipe']
+            stdio: ['pipe', 'pipe', 'pipe'],
         });
         const changes = status.split('\n').filter(l => l.trim()).length;
 
@@ -89,7 +89,7 @@ function readAutocompactSetting() {
 let input = '';
 
 process.stdin.setEncoding('utf8');
-process.stdin.on('data', chunk => input += chunk);
+process.stdin.on('data', chunk => (input += chunk));
 
 process.stdin.on('end', () => {
     let data;
@@ -168,5 +168,7 @@ process.stdin.on('end', () => {
     }
 
     // Output: [Model] directory | branch [changes] | XXk free (XX%) [AC]
-    console.log(`${DIM}[${model}]${RESET} ${BLUE}${dirName}${RESET}${gitInfo}${contextInfo}${acInfo}`);
+    console.log(
+        `${DIM}[${model}]${RESET} ${BLUE}${dirName}${RESET}${gitInfo}${contextInfo}${acInfo}`
+    );
 });

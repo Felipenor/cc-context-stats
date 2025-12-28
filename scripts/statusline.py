@@ -18,29 +18,29 @@ import subprocess
 import sys
 
 # ANSI Colors
-BLUE = '\033[0;34m'
-MAGENTA = '\033[0;35m'
-CYAN = '\033[0;36m'
-GREEN = '\033[0;32m'
-YELLOW = '\033[0;33m'
-RED = '\033[0;31m'
-DIM = '\033[2m'
-RESET = '\033[0m'
+BLUE = "\033[0;34m"
+MAGENTA = "\033[0;35m"
+CYAN = "\033[0;36m"
+GREEN = "\033[0;32m"
+YELLOW = "\033[0;33m"
+RED = "\033[0;31m"
+DIM = "\033[2m"
+RESET = "\033[0m"
 
 
 def get_git_info(project_dir):
     """Get git branch and change count"""
-    git_dir = os.path.join(project_dir, '.git')
+    git_dir = os.path.join(project_dir, ".git")
     if not os.path.isdir(git_dir):
         return ""
 
     try:
         # Get branch name (skip optional locks for performance)
         result = subprocess.run(
-            ['git', '--no-optional-locks', 'rev-parse', '--abbrev-ref', 'HEAD'],
+            ["git", "--no-optional-locks", "rev-parse", "--abbrev-ref", "HEAD"],
             cwd=project_dir,
             capture_output=True,
-            text=True
+            text=True,
         )
         branch = result.stdout.strip()
 
@@ -49,12 +49,12 @@ def get_git_info(project_dir):
 
         # Count changes
         result = subprocess.run(
-            ['git', '--no-optional-locks', 'status', '--porcelain'],
+            ["git", "--no-optional-locks", "status", "--porcelain"],
             cwd=project_dir,
             capture_output=True,
-            text=True
+            text=True,
         )
-        changes = len([line for line in result.stdout.split('\n') if line.strip()])
+        changes = len([line for line in result.stdout.split("\n") if line.strip()])
 
         if changes > 0:
             return f" | {MAGENTA}{branch}{RESET} {CYAN}[{changes}]{RESET}"
@@ -65,7 +65,7 @@ def get_git_info(project_dir):
 
 def read_autocompact_setting():
     """Read autocompact setting from config file"""
-    config_path = os.path.expanduser('~/.claude/statusline.conf')
+    config_path = os.path.expanduser("~/.claude/statusline.conf")
     if not os.path.exists(config_path):
         return True  # Default: enabled
 
@@ -73,11 +73,11 @@ def read_autocompact_setting():
         with open(config_path) as f:
             for line in f:
                 line = line.strip()
-                if line.startswith('#') or '=' not in line:
+                if line.startswith("#") or "=" not in line:
                     continue
-                key, value = line.split('=', 1)
-                if key.strip() == 'autocompact':
-                    return value.strip().lower() != 'false'
+                key, value = line.split("=", 1)
+                if key.strip() == "autocompact":
+                    return value.strip().lower() != "false"
     except Exception:
         pass
     return True  # Default: enabled
@@ -91,10 +91,10 @@ def main():
         return
 
     # Extract data
-    cwd = data.get('workspace', {}).get('current_dir', '~')
-    project_dir = data.get('workspace', {}).get('project_dir', cwd)
-    model = data.get('model', {}).get('display_name', 'Claude')
-    dir_name = os.path.basename(cwd) or '~'
+    cwd = data.get("workspace", {}).get("current_dir", "~")
+    project_dir = data.get("workspace", {}).get("project_dir", cwd)
+    model = data.get("model", {}).get("display_name", "Claude")
+    dir_name = os.path.basename(cwd) or "~"
 
     # Git info
     git_info = get_git_info(project_dir)
@@ -105,14 +105,14 @@ def main():
     # Context window calculation
     context_info = ""
     ac_info = ""
-    total_size = data.get('context_window', {}).get('context_window_size', 0)
-    current_usage = data.get('context_window', {}).get('current_usage')
+    total_size = data.get("context_window", {}).get("context_window_size", 0)
+    current_usage = data.get("context_window", {}).get("current_usage")
 
     if total_size > 0 and current_usage:
         # Get tokens from current_usage (includes cache)
-        input_tokens = current_usage.get('input_tokens', 0)
-        cache_creation = current_usage.get('cache_creation_input_tokens', 0)
-        cache_read = current_usage.get('cache_read_input_tokens', 0)
+        input_tokens = current_usage.get("input_tokens", 0)
+        cache_creation = current_usage.get("cache_creation_input_tokens", 0)
+        cache_read = current_usage.get("cache_read_input_tokens", 0)
 
         # Total used from current request
         used_tokens = input_tokens + cache_creation + cache_read
@@ -155,5 +155,5 @@ def main():
     print(f"{DIM}[{model}]{RESET} {BLUE}{dir_name}{RESET}{git_info}{context_info}{ac_info}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
