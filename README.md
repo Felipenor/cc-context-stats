@@ -2,6 +2,8 @@
 
 Custom status line scripts for [Claude Code](https://claude.com/claude-code).
 
+![Status Line Detail](images/statusline-detail.png)
+
 ## Screenshot
 
 ![Claude Code Status Line](images/claude-statusline.png)
