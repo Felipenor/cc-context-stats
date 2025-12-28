@@ -221,8 +221,15 @@ process.stdin.on('end', () => {
             try {
                 if (fs.existsSync(stateFile)) {
                     hasPrev = true;
+                    // Read last line to get previous token count
                     const content = fs.readFileSync(stateFile, 'utf8').trim();
-                    prevTokens = parseInt(content, 10) || 0;
+                    const lines = content.split('\n');
+                    const lastLine = lines[lines.length - 1];
+                    if (lastLine.includes(',')) {
+                        prevTokens = parseInt(lastLine.split(',')[1], 10) || 0;
+                    } else {
+                        prevTokens = parseInt(lastLine, 10) || 0;
+                    }
                 }
             } catch {
                 prevTokens = 0;
@@ -236,9 +243,10 @@ process.stdin.on('end', () => {
                     : `${(delta / 1000).toFixed(1)}k`;
                 deltaInfo = ` ${DIM}[+${deltaDisplay}]${RESET}`;
             }
-            // Save current usage for next time
+            // Append current usage with timestamp (format: timestamp,tokens)
             try {
-                fs.writeFileSync(stateFile, String(usedTokens));
+                const timestamp = Math.floor(Date.now() / 1000);
+                fs.appendFileSync(stateFile, `${timestamp},${usedTokens}\n`);
             } catch {
                 // Ignore errors
             }

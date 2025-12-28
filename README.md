@@ -121,6 +121,7 @@ The `[+X,XXX]` indicator shows how many tokens were consumed since the last stat
 - Only positive deltas are shown (when usage increases)
 - First run after starting Claude Code shows no delta (no baseline yet)
 - Each session has its own state file (`~/.claude/statusline.<session_id>.state`) to avoid conflicts when running multiple Claude Code sessions in parallel
+- Token history is stored with timestamps for later analysis (format: `timestamp,tokens` per line)
 
 ## Available Scripts
 

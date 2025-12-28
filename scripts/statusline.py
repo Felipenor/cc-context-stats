@@ -196,6 +196,8 @@ def main():
 
         # Calculate and display token delta if enabled
         if show_delta:
+            import time
+
             # Use session_id for per-session state (avoids conflicts with parallel sessions)
             session_id = data.get("session_id")
             if session_id:
@@ -207,8 +209,15 @@ def main():
             try:
                 if os.path.exists(state_file):
                     has_prev = True
+                    # Read last line to get previous token count
                     with open(state_file) as f:
-                        prev_tokens = int(f.read().strip() or 0)
+                        lines = f.readlines()
+                        if lines:
+                            last_line = lines[-1].strip()
+                            if "," in last_line:
+                                prev_tokens = int(last_line.split(",")[1])
+                            else:
+                                prev_tokens = int(last_line or 0)
             except Exception:
                 prev_tokens = 0
             # Calculate delta
@@ -220,10 +229,10 @@ def main():
                 else:
                     delta_display = f"{delta / 1000:.1f}k"
                 delta_info = f" {DIM}[+{delta_display}]{RESET}"
-            # Save current usage for next time
+            # Append current usage with timestamp (format: timestamp,tokens)
             try:
-                with open(state_file, "w") as f:
-                    f.write(str(used_tokens))
+                with open(state_file, "a") as f:
+                    f.write(f"{int(time.time())},{used_tokens}\n")
             except Exception:
                 pass
 

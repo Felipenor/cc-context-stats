@@ -160,7 +160,8 @@ if [[ "$total_size" -gt 0 && "$current_usage" != "null" ]]; then
         prev_tokens=0
         if [[ -f "$state_file" ]]; then
             has_prev=true
-            prev_tokens=$(cat "$state_file" 2>/dev/null)
+            # Read last line to get previous token count
+            prev_tokens=$(tail -1 "$state_file" 2>/dev/null | cut -d',' -f2)
             prev_tokens=${prev_tokens:-0}
         fi
         # Calculate delta
@@ -174,8 +175,8 @@ if [[ "$total_size" -gt 0 && "$current_usage" != "null" ]]; then
             fi
             delta_info=" ${DIM}[+${delta_display}]${RESET}"
         fi
-        # Save current usage for next time
-        echo "$used_tokens" > "$state_file"
+        # Append current usage with timestamp (format: timestamp,tokens)
+        echo "$(date +%s),$used_tokens" >> "$state_file"
     fi
 fi
 
