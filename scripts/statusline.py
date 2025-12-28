@@ -124,7 +124,8 @@ def main():
         if autocompact_enabled:
             # When AC enabled: subtract buffer to show actual usable space
             free_tokens = total_size - used_tokens - autocompact_buffer
-            ac_info = f" {DIM}[AC]{RESET}"
+            buffer_k = autocompact_buffer // 1000
+            ac_info = f" {DIM}[AC:{buffer_k}k]{RESET}"
         else:
             # When AC disabled: show full free space
             free_tokens = total_size - used_tokens

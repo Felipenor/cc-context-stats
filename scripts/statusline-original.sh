@@ -72,7 +72,8 @@ if [[ "$total_size" -gt 0 && "$current_usage" != "null" ]]; then
     # Free tokens calculation depends on autocompact setting
     if [[ "$autocompact_enabled" == "true" ]]; then
         free_tokens=$((total_size - used_tokens - autocompact_buffer))
-        ac_info=" ${DIM}[AC]${RESET}"
+        buffer_k=$((autocompact_buffer / 1000))
+        ac_info=" ${DIM}[AC:${buffer_k}k]${RESET}"
     else
         free_tokens=$((total_size - used_tokens))
         ac_info=" ${DIM}[AC:off]${RESET}"

@@ -133,7 +133,8 @@ process.stdin.on('end', () => {
         if (autocompactEnabled) {
             // When AC enabled: subtract buffer to show actual usable space
             freeTokens = totalSize - usedTokens - autocompactBuffer;
-            acInfo = ` ${DIM}[AC]${RESET}`;
+            const bufferK = Math.floor(autocompactBuffer / 1000);
+            acInfo = ` ${DIM}[AC:${bufferK}k]${RESET}`;
         } else {
             // When AC disabled: show full free space
             freeTokens = totalSize - usedTokens;
