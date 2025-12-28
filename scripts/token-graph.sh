@@ -353,23 +353,35 @@ render_timeseries_graph() {
     echo -e "${DIM}Max: $(format_number $max)  Min: $(format_number $min)  Points: $n${RESET}"
     echo ""
 
-    # Build grid using awk for portability
+    # Build grid using awk - smooth line with filled area below
     local grid_output
     grid_output=$(echo "$data" | awk -v width="$GRAPH_WIDTH" -v height="$GRAPH_HEIGHT" \
         -v min="$min" -v max="$max" -v range="$range" '
     BEGIN {
-        # Initialize grid with spaces
+        # Characters for different parts of the graph
+        # Line: dots for the trend line
+        # Fill: lighter shading below the line
+        dot = "●"
+        fill_dark = "░"
+        fill_light = "▒"
+        empty = " "
+
+        # Initialize grid with empty spaces
         for (r = 0; r < height; r++) {
             for (c = 0; c < width; c++) {
-                grid[r,c] = " "
+                grid[r,c] = empty
             }
+        }
+
+        # Store y values for each x position (for interpolation)
+        for (c = 0; c < width; c++) {
+            line_y[c] = -1
         }
     }
     {
         n = NF
-        prev_x = -1
-        prev_y = -1
 
+        # First pass: calculate y position for each data point
         for (i = 1; i <= n; i++) {
             val = $i
 
@@ -383,28 +395,61 @@ render_timeseries_graph() {
             if (x < 0) x = 0
 
             # Map value to y coordinate (inverted: 0=top)
-            y = int((max - val) * (height - 1) / range)
+            y = (max - val) * (height - 1) / range
             if (y >= height) y = height - 1
             if (y < 0) y = 0
 
-            # Draw vertical line from previous point if needed
-            if (prev_x >= 0 && prev_y != y) {
-                if (prev_y < y) {
-                    for (ly = prev_y + 1; ly < y; ly++) {
-                        grid[ly, prev_x] = "|"
-                    }
+            data_x[i] = x
+            data_y[i] = y
+        }
+
+        # Second pass: interpolate between points to fill every x position
+        for (i = 1; i < n; i++) {
+            x1 = data_x[i]
+            y1 = data_y[i]
+            x2 = data_x[i+1]
+            y2 = data_y[i+1]
+
+            # Linear interpolation for each x between x1 and x2
+            for (x = x1; x <= x2; x++) {
+                if (x2 == x1) {
+                    y = y1
                 } else {
-                    for (ly = prev_y - 1; ly > y; ly--) {
-                        grid[ly, x] = "|"
+                    # Linear interpolation
+                    t = (x - x1) / (x2 - x1)
+                    y = y1 + t * (y2 - y1)
+                }
+                line_y[x] = y
+            }
+        }
+
+        # Third pass: draw the filled area and line
+        for (c = 0; c < width; c++) {
+            if (line_y[c] >= 0) {
+                line_row = int(line_y[c] + 0.5)  # Round to nearest integer
+                if (line_row >= height) line_row = height - 1
+                if (line_row < 0) line_row = 0
+
+                # Fill area below the line with gradient
+                for (r = line_row; r < height; r++) {
+                    if (r == line_row) {
+                        grid[r, c] = dot  # The line itself
+                    } else if (r < line_row + 2) {
+                        grid[r, c] = fill_light  # Darker fill near line
+                    } else {
+                        grid[r, c] = fill_dark   # Lighter fill further down
                     }
                 }
             }
+        }
 
-            # Plot point
-            grid[y, x] = "@"
-
-            prev_x = x
-            prev_y = y
+        # Fourth pass: mark actual data points with larger dots
+        for (i = 1; i <= n; i++) {
+            x = data_x[i]
+            y = int(data_y[i] + 0.5)
+            if (y >= height) y = height - 1
+            if (y < 0) y = 0
+            grid[y, x] = dot
         }
     }
     END {
@@ -431,15 +476,15 @@ render_timeseries_graph() {
 
         local row
         row=$(echo "$grid_output" | sed -n "$((r+1))p")
-        printf "%10s ${DIM}|${RESET}${color}%s${RESET}\n" "$label" "$row"
+        printf "%10s ${DIM}│${RESET}${color}%s${RESET}\n" "$label" "$row"
         r=$((r + 1))
     done
 
     # X-axis
-    printf "%10s ${DIM}+" ""
+    printf "%10s ${DIM}└" ""
     local c=0
     while [ $c -lt $GRAPH_WIDTH ]; do
-        printf "-"
+        printf "─"
         c=$((c + 1))
     done
     printf "${RESET}\n"
