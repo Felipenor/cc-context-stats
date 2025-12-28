@@ -2,29 +2,53 @@
 # Full-featured status line with context window usage
 # Usage: Copy to ~/.claude/statusline.sh and make executable
 
+# Colors
+BLUE='\033[0;34m'
+MAGENTA='\033[0;35m'
+CYAN='\033[0;36m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+RED='\033[0;31m'
+DIM='\033[2m'
+RESET='\033[0m'
+
 # Read JSON input from stdin
 input=$(cat)
 
 # Extract information from JSON
 cwd=$(echo "$input" | jq -r '.workspace.current_dir')
 project_dir=$(echo "$input" | jq -r '.workspace.project_dir')
-model=$(echo "$input" | jq -r '.model.display_name')
-
-# Get directory name
+model=$(echo "$input" | jq -r '.model.display_name // "Claude"')
 dir_name=$(basename "$cwd")
 
 # Git information (skip optional locks for performance)
+git_info=""
 if [[ -d "$project_dir/.git" ]]; then
     git_branch=$(cd "$project_dir" 2>/dev/null && git --no-optional-locks rev-parse --abbrev-ref HEAD 2>/dev/null)
     git_status_count=$(cd "$project_dir" 2>/dev/null && git --no-optional-locks status --porcelain 2>/dev/null | wc -l | tr -d ' ')
-else
-    git_branch=""
-    git_status_count="0"
+
+    if [[ -n "$git_branch" ]]; then
+        if [[ "$git_status_count" != "0" ]]; then
+            git_info=" | ${MAGENTA}${git_branch}${RESET} ${CYAN}[${git_status_count}]${RESET}"
+        else
+            git_info=" | ${MAGENTA}${git_branch}${RESET}"
+        fi
+    fi
+fi
+
+# Autocompact setting - read from statusline config file
+# Create ~/.claude/statusline.conf with: autocompact=false to disable
+autocompact_enabled=true
+if [[ -f ~/.claude/statusline.conf ]]; then
+    source ~/.claude/statusline.conf
+    if [[ "$autocompact" == "false" ]]; then
+        autocompact_enabled=false
+    fi
 fi
 
 # Calculate context window - show remaining free space
-# Matches /context output: Free space = context_window_size - used_tokens
-context_free=""
+context_info=""
+ac_info=""
 total_size=$(echo "$input" | jq -r '.context_window.context_window_size // 0')
 current_usage=$(echo "$input" | jq '.context_window.current_usage')
 
@@ -37,45 +61,50 @@ if [[ "$total_size" -gt 0 && "$current_usage" != "null" ]]; then
     # Total used from current request
     used_tokens=$((input_tokens + cache_creation + cache_read))
 
-    # Free = total - used (matches /context "Free space" display)
-    # Note: /context shows autocompact buffer separately, not subtracted from free
-    free_tokens=$((total_size - used_tokens))
+    # Calculate autocompact buffer (22.5% of context window = 45k for 200k)
+    autocompact_buffer=$((total_size * 225 / 1000))
+
+    # Free tokens calculation depends on autocompact setting
+    if [[ "$autocompact_enabled" == "true" ]]; then
+        # When AC enabled: subtract buffer to show actual usable space
+        free_tokens=$((total_size - used_tokens - autocompact_buffer))
+        ac_info=" ${DIM}[AC]${RESET}"
+    else
+        # When AC disabled: show full free space
+        free_tokens=$((total_size - used_tokens))
+        ac_info=" ${DIM}[AC:off]${RESET}"
+    fi
+
     if [[ "$free_tokens" -lt 0 ]]; then
         free_tokens=0
     fi
-    free_pct=$((free_tokens * 100 / total_size))
 
-    # Format tokens in k
-    free_k=$((free_tokens / 1000))
-    context_free="${free_k}k (${free_pct}%)"
-fi
+    # Calculate percentage with one decimal (relative to total size)
+    free_pct=$(awk "BEGIN {printf \"%.1f\", ($free_tokens * 100.0 / $total_size)}")
+    free_pct_int=${free_pct%.*}
 
-# Build status line with colors
-output=""
+    # Format tokens in k with one decimal
+    free_display=$(awk "BEGIN {printf \"%.1fk\", $free_tokens / 1000}")
 
-# Directory in blue
-output+=$(printf "\033[1;34m[%s]\033[0m" "$dir_name")
-
-# Git branch in magenta
-if [[ -n "$git_branch" ]]; then
-    output+=$(printf " \033[1;35m%s\033[0m" "$git_branch")
-
-    # Git status count in cyan if there are changes
-    if [[ "$git_status_count" != "0" ]]; then
-        output+=$(printf " \033[36m●%s\033[0m" "$git_status_count")
+    # Color based on free percentage
+    if [[ "$free_pct_int" -gt 50 ]]; then
+        ctx_color="$GREEN"
+    elif [[ "$free_pct_int" -gt 25 ]]; then
+        ctx_color="$YELLOW"
+    else
+        ctx_color="$RED"
     fi
+
+    context_info=" | ${ctx_color}${free_display} free (${free_pct}%)${RESET}"
 fi
 
-# Model in dim white
-output+=$(printf " \033[2m• %s\033[0m" "$model")
-
-# Context free space in green if available
-if [[ -n "$context_free" ]]; then
-    output+=$(printf " \033[1;32m[%s free]\033[0m" "$context_free")
+# Cost info (estimation based on API usage)
+cost_info=""
+cost=$(echo "$input" | jq -r '.cost.total_cost_usd // 0')
+if [[ "$cost" != "0" && "$cost" != "null" ]]; then
+    cost_formatted=$(printf "%.4f" "$cost")
+    cost_info=" | ${DIM}~\$${cost_formatted}${RESET}"
 fi
 
-# Autocompact indicator (always enabled in Claude Code)
-output+=$(printf " \033[2m[AC]\033[0m")
-
-# Output the final status line
-echo "$output"
+# Output: [Model] directory | branch [changes] | XXk free (XX%) [AC] | ~$X.XXXX
+echo -e "${DIM}[${model}]${RESET} ${BLUE}${dir_name}${RESET}${git_info}${context_info}${ac_info}${cost_info}"

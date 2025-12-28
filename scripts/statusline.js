@@ -6,6 +6,8 @@
 
 const { execSync } = require('child_process');
 const path = require('path');
+const fs = require('fs');
+const os = require('os');
 
 // ANSI Colors
 const BLUE = '\x1b[0;34m';
@@ -17,26 +19,27 @@ const RED = '\x1b[0;31m';
 const DIM = '\x1b[2m';
 const RESET = '\x1b[0m';
 
-function getGitInfo(directory) {
-    try {
-        // Check if in git repo
-        execSync('git rev-parse --git-dir', {
-            cwd: directory,
-            stdio: ['pipe', 'pipe', 'pipe']
-        });
+function getGitInfo(projectDir) {
+    const gitDir = path.join(projectDir, '.git');
+    if (!fs.existsSync(gitDir) || !fs.statSync(gitDir).isDirectory()) {
+        return '';
+    }
 
-        // Get branch
-        const branch = execSync('git branch --show-current', {
-            cwd: directory,
-            encoding: 'utf8'
+    try {
+        // Get branch name (skip optional locks for performance)
+        const branch = execSync('git --no-optional-locks rev-parse --abbrev-ref HEAD', {
+            cwd: projectDir,
+            encoding: 'utf8',
+            stdio: ['pipe', 'pipe', 'pipe']
         }).trim();
 
         if (!branch) return '';
 
         // Count changes
-        const status = execSync('git status --porcelain', {
-            cwd: directory,
-            encoding: 'utf8'
+        const status = execSync('git --no-optional-locks status --porcelain', {
+            cwd: projectDir,
+            encoding: 'utf8',
+            stdio: ['pipe', 'pipe', 'pipe']
         });
         const changes = status.split('\n').filter(l => l.trim()).length;
 
@@ -49,11 +52,28 @@ function getGitInfo(directory) {
     }
 }
 
-function formatTokens(tokens) {
-    if (tokens >= 1000) {
-        return `${(tokens / 1000).toFixed(1)}k`;
+function readAutocompactSetting() {
+    const configPath = path.join(os.homedir(), '.claude', 'statusline.conf');
+    if (!fs.existsSync(configPath)) {
+        return true; // Default: enabled
     }
-    return String(tokens);
+
+    try {
+        const content = fs.readFileSync(configPath, 'utf8');
+        for (const line of content.split('\n')) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('#') || !trimmed.includes('=')) {
+                continue;
+            }
+            const [key, value] = trimmed.split('=', 2);
+            if (key.trim() === 'autocompact') {
+                return value.trim().toLowerCase() !== 'false';
+            }
+        }
+    } catch {
+        // Ignore errors
+    }
+    return true; // Default: enabled
 }
 
 let input = '';
@@ -71,52 +91,78 @@ process.stdin.on('end', () => {
     }
 
     // Extract data
+    const cwd = data.workspace?.current_dir || '~';
+    const projectDir = data.workspace?.project_dir || cwd;
     const model = data.model?.display_name || 'Claude';
-    const currentDir = data.workspace?.current_dir || '~';
-    const dirName = path.basename(currentDir) || '~';
-
-    // Context window
-    const ctx = data.context_window || {};
-    const contextSize = ctx.context_window_size || 200000;
-    const inputTokens = ctx.total_input_tokens || 0;
-    const outputTokens = ctx.total_output_tokens || 0;
-
-    // Calculate used tokens
-    const usedTokens = inputTokens + outputTokens;
-
-    // Free tokens (matches /context "Free space" calculation)
-    let freeTokens = contextSize - usedTokens;
-    if (freeTokens < 0) {
-        freeTokens = 0;
-    }
-
-    // Calculate percentage (matches /context output precision)
-    const freePercent = contextSize > 0 ? (freeTokens * 100.0 / contextSize) : 0;
-
-    // Autocompact is always enabled in Claude Code
-    const autocompactEnabled = true;
-
-    // Color based on free percentage
-    let ctxColor;
-    if (freePercent > 50) {
-        ctxColor = GREEN;
-    } else if (freePercent > 25) {
-        ctxColor = YELLOW;
-    } else {
-        ctxColor = RED;
-    }
+    const dirName = path.basename(cwd) || '~';
 
     // Git info
-    const gitInfo = getGitInfo(currentDir);
+    const gitInfo = getGitInfo(projectDir);
 
-    // Cost
+    // Autocompact setting - read from config file
+    const autocompactEnabled = readAutocompactSetting();
+
+    // Context window calculation
+    let contextInfo = '';
+    let acInfo = '';
+    const totalSize = data.context_window?.context_window_size || 0;
+    const currentUsage = data.context_window?.current_usage;
+
+    if (totalSize > 0 && currentUsage) {
+        // Get tokens from current_usage (includes cache)
+        const inputTokens = currentUsage.input_tokens || 0;
+        const cacheCreation = currentUsage.cache_creation_input_tokens || 0;
+        const cacheRead = currentUsage.cache_read_input_tokens || 0;
+
+        // Total used from current request
+        const usedTokens = inputTokens + cacheCreation + cacheRead;
+
+        // Calculate autocompact buffer (22.5% of context window = 45k for 200k)
+        const autocompactBuffer = Math.floor(totalSize * 0.225);
+
+        // Free tokens calculation depends on autocompact setting
+        let freeTokens;
+        if (autocompactEnabled) {
+            // When AC enabled: subtract buffer to show actual usable space
+            freeTokens = totalSize - usedTokens - autocompactBuffer;
+            acInfo = ` ${DIM}[AC]${RESET}`;
+        } else {
+            // When AC disabled: show full free space
+            freeTokens = totalSize - usedTokens;
+            acInfo = ` ${DIM}[AC:off]${RESET}`;
+        }
+
+        if (freeTokens < 0) {
+            freeTokens = 0;
+        }
+
+        // Calculate percentage with one decimal (relative to total size)
+        const freePct = (freeTokens * 100.0) / totalSize;
+        const freePctInt = Math.floor(freePct);
+
+        // Format tokens in k with one decimal
+        const freeDisplay = `${(freeTokens / 1000).toFixed(1)}k`;
+
+        // Color based on free percentage
+        let ctxColor;
+        if (freePctInt > 50) {
+            ctxColor = GREEN;
+        } else if (freePctInt > 25) {
+            ctxColor = YELLOW;
+        } else {
+            ctxColor = RED;
+        }
+
+        contextInfo = ` | ${ctxColor}${freeDisplay} free (${freePct.toFixed(1)}%)${RESET}`;
+    }
+
+    // Cost info (estimation based on API usage)
+    let costInfo = '';
     const cost = data.cost?.total_cost_usd || 0;
-    const costInfo = cost ? ` | ${DIM}$${cost.toFixed(4)}${RESET}` : '';
+    if (cost && cost !== 0) {
+        costInfo = ` | ${DIM}~$${cost.toFixed(4)}${RESET}`;
+    }
 
-    // Autocompact indicator
-    const autocompactInfo = autocompactEnabled ? `${DIM}[AC]${RESET}` : `${DIM}[AC:off]${RESET}`;
-
-    // Output
-    const freeDisplay = formatTokens(freeTokens);
-    console.log(`${DIM}[${model}]${RESET} ${BLUE}${dirName}${RESET}${gitInfo} | ${ctxColor}${freeDisplay} free (${freePercent.toFixed(1)}%)${RESET} ${autocompactInfo}${costInfo}`);
+    // Output: [Model] directory | branch [changes] | XXk free (XX%) [AC] | ~$X.XXXX
+    console.log(`${DIM}[${model}]${RESET} ${BLUE}${dirName}${RESET}${gitInfo}${contextInfo}${acInfo}${costInfo}`);
 });

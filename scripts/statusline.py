@@ -20,19 +20,19 @@ DIM = '\033[2m'
 RESET = '\033[0m'
 
 
-def get_git_info(directory):
+def get_git_info(project_dir):
     """Get git branch and change count"""
-    try:
-        # Check if in git repo
-        subprocess.run(
-            ['git', '-C', directory, 'rev-parse', '--git-dir'],
-            capture_output=True, check=True
-        )
+    git_dir = os.path.join(project_dir, '.git')
+    if not os.path.isdir(git_dir):
+        return ""
 
-        # Get branch name
+    try:
+        # Get branch name (skip optional locks for performance)
         result = subprocess.run(
-            ['git', '-C', directory, 'branch', '--show-current'],
-            capture_output=True, text=True
+            ['git', '--no-optional-locks', 'rev-parse', '--abbrev-ref', 'HEAD'],
+            cwd=project_dir,
+            capture_output=True,
+            text=True
         )
         branch = result.stdout.strip()
 
@@ -41,8 +41,10 @@ def get_git_info(directory):
 
         # Count changes
         result = subprocess.run(
-            ['git', '-C', directory, 'status', '--porcelain'],
-            capture_output=True, text=True
+            ['git', '--no-optional-locks', 'status', '--porcelain'],
+            cwd=project_dir,
+            capture_output=True,
+            text=True
         )
         changes = len([l for l in result.stdout.split('\n') if l.strip()])
 
@@ -53,11 +55,24 @@ def get_git_info(directory):
         return ""
 
 
-def format_tokens(tokens):
-    """Format token count (k for thousands, with one decimal)"""
-    if tokens >= 1000:
-        return f"{tokens / 1000:.1f}k"
-    return str(tokens)
+def read_autocompact_setting():
+    """Read autocompact setting from config file"""
+    config_path = os.path.expanduser('~/.claude/statusline.conf')
+    if not os.path.exists(config_path):
+        return True  # Default: enabled
+
+    try:
+        with open(config_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith('#') or '=' not in line:
+                    continue
+                key, value = line.split('=', 1)
+                if key.strip() == 'autocompact':
+                    return value.strip().lower() != 'false'
+    except Exception:
+        pass
+    return True  # Default: enabled
 
 
 def main():
@@ -68,51 +83,73 @@ def main():
         return
 
     # Extract data
+    cwd = data.get('workspace', {}).get('current_dir', '~')
+    project_dir = data.get('workspace', {}).get('project_dir', cwd)
     model = data.get('model', {}).get('display_name', 'Claude')
-    current_dir = data.get('workspace', {}).get('current_dir', '~')
-    dir_name = os.path.basename(current_dir) or '~'
-
-    # Context window
-    ctx = data.get('context_window', {})
-    context_size = ctx.get('context_window_size', 200000)
-    input_tokens = ctx.get('total_input_tokens', 0)
-    output_tokens = ctx.get('total_output_tokens', 0)
-
-    # Calculate used tokens
-    used_tokens = input_tokens + output_tokens
-
-    # Free tokens (matches /context "Free space" calculation)
-    free_tokens = context_size - used_tokens
-    if free_tokens < 0:
-        free_tokens = 0
-
-    # Calculate percentage (matches /context output precision)
-    free_percent = (free_tokens * 100.0 / context_size) if context_size > 0 else 0
-
-    # Autocompact is always enabled in Claude Code
-    autocompact_enabled = True
-
-    # Color based on free percentage
-    if free_percent > 50:
-        ctx_color = GREEN
-    elif free_percent > 25:
-        ctx_color = YELLOW
-    else:
-        ctx_color = RED
+    dir_name = os.path.basename(cwd) or '~'
 
     # Git info
-    git_info = get_git_info(current_dir)
+    git_info = get_git_info(project_dir)
 
-    # Cost
+    # Autocompact setting - read from config file
+    autocompact_enabled = read_autocompact_setting()
+
+    # Context window calculation
+    context_info = ""
+    ac_info = ""
+    total_size = data.get('context_window', {}).get('context_window_size', 0)
+    current_usage = data.get('context_window', {}).get('current_usage')
+
+    if total_size > 0 and current_usage:
+        # Get tokens from current_usage (includes cache)
+        input_tokens = current_usage.get('input_tokens', 0)
+        cache_creation = current_usage.get('cache_creation_input_tokens', 0)
+        cache_read = current_usage.get('cache_read_input_tokens', 0)
+
+        # Total used from current request
+        used_tokens = input_tokens + cache_creation + cache_read
+
+        # Calculate autocompact buffer (22.5% of context window = 45k for 200k)
+        autocompact_buffer = int(total_size * 0.225)
+
+        # Free tokens calculation depends on autocompact setting
+        if autocompact_enabled:
+            # When AC enabled: subtract buffer to show actual usable space
+            free_tokens = total_size - used_tokens - autocompact_buffer
+            ac_info = f" {DIM}[AC]{RESET}"
+        else:
+            # When AC disabled: show full free space
+            free_tokens = total_size - used_tokens
+            ac_info = f" {DIM}[AC:off]{RESET}"
+
+        if free_tokens < 0:
+            free_tokens = 0
+
+        # Calculate percentage with one decimal (relative to total size)
+        free_pct = (free_tokens * 100.0) / total_size
+        free_pct_int = int(free_pct)
+
+        # Format tokens in k with one decimal
+        free_display = f"{free_tokens / 1000:.1f}k"
+
+        # Color based on free percentage
+        if free_pct_int > 50:
+            ctx_color = GREEN
+        elif free_pct_int > 25:
+            ctx_color = YELLOW
+        else:
+            ctx_color = RED
+
+        context_info = f" | {ctx_color}{free_display} free ({free_pct:.1f}%){RESET}"
+
+    # Cost info (estimation based on API usage)
+    cost_info = ""
     cost = data.get('cost', {}).get('total_cost_usd', 0)
-    cost_info = f" | {DIM}${cost:.4f}{RESET}" if cost else ""
+    if cost and cost != 0:
+        cost_info = f" | {DIM}~${cost:.4f}{RESET}"
 
-    # Autocompact indicator
-    autocompact_info = f"{DIM}[AC]{RESET}" if autocompact_enabled else f"{DIM}[AC:off]{RESET}"
-
-    # Output
-    free_display = format_tokens(free_tokens)
-    print(f"{DIM}[{model}]{RESET} {BLUE}{dir_name}{RESET}{git_info} | {ctx_color}{free_display} free ({free_percent:.1f}%){RESET} {autocompact_info}{cost_info}")
+    # Output: [Model] directory | branch [changes] | XXk free (XX%) [AC] | ~$X.XXXX
+    print(f"{DIM}[{model}]{RESET} {BLUE}{dir_name}{RESET}{git_info}{context_info}{ac_info}{cost_info}")
 
 
 if __name__ == '__main__':
