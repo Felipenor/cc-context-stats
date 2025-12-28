@@ -4,9 +4,7 @@ A collection of customizable status line scripts and setup tools for [Claude Cod
 
 ## Screenshot
 
-```
-[Opus 4.5] my-project | main [3] | 64.0k free (32.0%) [AC:45k]
-```
+![Claude Code Status Line](images/claude-statusline.png)
 
 **Components:**
 - `[Opus 4.5]` - Current AI model
