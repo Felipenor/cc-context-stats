@@ -16,7 +16,7 @@ Custom status line scripts for [Claude Code](https://claude.com/claude-code).
 
 ## Installation
 
-### Option 1: Automated
+### macOS / Linux
 
 ```bash
 git clone https://github.com/luongnv89/claude-statusline.git
@@ -24,29 +24,69 @@ cd claude-statusline
 ./install.sh
 ```
 
-### Option 2: Manual
+Or manually:
+```bash
+cp scripts/statusline-full.sh ~/.claude/statusline.sh
+chmod +x ~/.claude/statusline.sh
+```
 
-1. Copy script to `~/.claude/`:
-   ```bash
-   cp scripts/statusline-full.sh ~/.claude/statusline.sh
-   chmod +x ~/.claude/statusline.sh
-   ```
+### Windows
 
-2. Add to `~/.claude/settings.json`:
-   ```json
-   {
-     "statusLine": {
-       "type": "command",
-       "command": "~/.claude/statusline.sh"
-     }
-   }
-   ```
+Use the Python or Node.js version (no `jq` required):
+
+```powershell
+git clone https://github.com/luongnv89/claude-statusline.git
+copy claude-statusline\scripts\statusline.py %USERPROFILE%\.claude\statusline.py
+```
+
+Or with Node.js:
+```powershell
+copy claude-statusline\scripts\statusline.js %USERPROFILE%\.claude\statusline.js
+```
+
+### Configure Claude Code
+
+Add to your Claude Code settings (`~/.claude/settings.json` or `%USERPROFILE%\.claude\settings.json`):
+
+**macOS / Linux (bash):**
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "~/.claude/statusline.sh"
+  }
+}
+```
+
+**Windows (Python):**
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "python %USERPROFILE%\\.claude\\statusline.py"
+  }
+}
+```
+
+**Windows (Node.js):**
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "node %USERPROFILE%\\.claude\\statusline.js"
+  }
+}
+```
 
 ## Configuration
 
 ### Autocompact Setting
 
-The AC indicator must be manually synced with Claude Code. Create `~/.claude/statusline.conf`:
+The AC indicator must be manually synced with Claude Code.
+
+**macOS / Linux:** Create `~/.claude/statusline.conf`
+
+**Windows:** Create `%USERPROFILE%\.claude\statusline.conf`
 
 ```bash
 # When autocompact is enabled (default)
@@ -62,30 +102,57 @@ autocompact=false
 
 ## Available Scripts
 
-| Script | Description |
-|--------|-------------|
-| `statusline-full.sh` | Full featured (recommended) |
-| `statusline-git.sh` | Git branch info only |
-| `statusline-minimal.sh` | Model + directory only |
-| `statusline.py` | Python version |
-| `statusline.js` | Node.js version |
+| Script | Platform | Requirements |
+|--------|----------|--------------|
+| `statusline-full.sh` | macOS, Linux | `jq` |
+| `statusline-git.sh` | macOS, Linux | `jq` |
+| `statusline-minimal.sh` | macOS, Linux | `jq` |
+| `statusline.py` | All (Windows, macOS, Linux) | Python 3 |
+| `statusline.js` | All (Windows, macOS, Linux) | Node.js |
 
 ## Requirements
 
-- Claude Code CLI
-- `jq` (install: `brew install jq` or `apt install jq`)
-- Python 3 or Node.js for respective scripts
+### macOS
+```bash
+brew install jq
+```
+
+### Linux (Debian/Ubuntu)
+```bash
+sudo apt install jq
+```
+
+### Linux (Fedora/RHEL)
+```bash
+sudo dnf install jq
+```
+
+### Windows
+No additional requirements for Python/Node.js scripts.
+
+For bash scripts via WSL:
+```bash
+sudo apt install jq
+```
 
 ## Troubleshooting
 
 **Status line not appearing?**
+
+macOS/Linux:
 ```bash
 chmod +x ~/.claude/statusline.sh
 echo '{"model":{"display_name":"Test"}}' | ~/.claude/statusline.sh
 ```
 
+Windows (Python):
+```powershell
+echo {"model":{"display_name":"Test"}} | python %USERPROFILE%\.claude\statusline.py
+```
+
 **Script errors?**
-- Check `jq` is installed: `which jq`
+- macOS/Linux: Check `jq` is installed: `which jq`
+- Windows: Check Python/Node.js is in PATH: `python --version` or `node --version`
 
 ## License
 
