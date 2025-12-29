@@ -7,6 +7,7 @@
 #
 # Options:
 #   --type <cumulative|delta|both>  Graph type to display (default: both)
+#   --watch, -w [interval]          Real-time monitoring mode (default: 2s)
 #   --no-color                      Disable color output
 #   --help                          Show this help
 #
@@ -14,6 +15,8 @@
 #   token-graph.sh                        # Latest session, both graphs
 #   token-graph.sh abc123                 # Specific session
 #   token-graph.sh --type delta           # Only delta graph
+#   token-graph.sh --watch                # Real-time mode (2s refresh)
+#   token-graph.sh -w 5                   # Real-time mode (5s refresh)
 
 # Note: This script is compatible with bash 3.2+ (macOS default)
 
@@ -48,6 +51,8 @@ SESSION_ID=""
 GRAPH_TYPE="both"
 COLOR_ENABLED=true
 TOKEN_DETAIL_ENABLED=true
+WATCH_MODE=false
+WATCH_INTERVAL=2
 
 # === UTILITY FUNCTIONS ===
 
@@ -66,6 +71,10 @@ OPTIONS:
                    - cumulative: Total tokens over time
                    - delta: Token consumption per interval
                    - both: Show both graphs (default)
+    --watch, -w [interval]
+                   Enable real-time monitoring mode.
+                   Refreshes the graph every [interval] seconds (default: 2).
+                   Press Ctrl+C to exit.
     --no-color     Disable color output
     --help         Show this help message
 
@@ -78,6 +87,15 @@ EXAMPLES:
 
     # Show only cumulative graph
     token-graph.sh --type cumulative
+
+    # Real-time monitoring (refresh every 2 seconds)
+    token-graph.sh --watch
+
+    # Real-time monitoring with custom interval
+    token-graph.sh -w 5
+
+    # Combine options
+    token-graph.sh abc123 --type cumulative --watch 3
 
     # Disable colors for piping to file
     token-graph.sh --no-color > output.txt
@@ -549,6 +567,16 @@ parse_args() {
                 COLOR_ENABLED=false
                 shift
                 ;;
+            --watch|-w)
+                WATCH_MODE=true
+                # Check if next argument is a number (interval)
+                if [ $# -ge 2 ] && [[ "$2" =~ ^[0-9]+$ ]]; then
+                    WATCH_INTERVAL="$2"
+                    shift 2
+                else
+                    shift
+                fi
+                ;;
             --type)
                 if [ $# -lt 2 ]; then
                     error_exit "--type requires an argument: cumulative, delta, or both"
@@ -581,12 +609,8 @@ parse_args() {
 
 # === MAIN ===
 
-main() {
-    parse_args "$@"
-    init_colors
-    get_terminal_dimensions
-
-    # Load configuration safely (no sourcing to prevent code injection)
+# Load configuration from file
+load_config() {
     if [ -f "$CONFIG_FILE" ]; then
         while IFS='=' read -r key value || [ -n "$key" ]; do
             # Skip comments and empty lines
@@ -607,11 +631,11 @@ main() {
             esac
         done < "$CONFIG_FILE"
     fi
+}
 
-    # Find and validate state file
-    local state_file
-    state_file=$(find_latest_state_file)
-    validate_state_file "$state_file"
+# Render graphs once
+render_once() {
+    local state_file=$1
 
     # Load data
     load_token_history "$state_file"
@@ -639,6 +663,67 @@ main() {
 
     # Render summary
     render_summary
+}
+
+# Watch mode - continuously refresh the display
+run_watch_mode() {
+    local state_file=$1
+
+    # Set up signal handler for clean exit
+    trap 'printf "\n${DIM}Watch mode stopped.${RESET}\n"; exit 0' INT TERM
+
+    echo -e "${DIM}Watch mode: refreshing every ${WATCH_INTERVAL}s (Ctrl+C to exit)${RESET}"
+    sleep 1
+
+    while true; do
+        # Clear screen
+        clear
+
+        # Re-read terminal dimensions in case of resize
+        get_terminal_dimensions
+
+        # Show watch mode indicator
+        local current_time
+        current_time=$(date +%H:%M:%S)
+        echo -e "${DIM}[Watch mode: ${current_time} | Refresh: ${WATCH_INTERVAL}s | Ctrl+C to exit]${RESET}"
+
+        # Re-validate and render (file might have new data)
+        if [ -f "$state_file" ]; then
+            local line_count
+            line_count=$(wc -l < "$state_file" | tr -d ' ')
+            if [ "$line_count" -ge 2 ]; then
+                render_once "$state_file"
+            else
+                echo -e "\n${YELLOW}Waiting for more data points...${RESET}"
+                echo -e "${DIM}Current: $line_count point(s), need at least 2${RESET}"
+            fi
+        else
+            echo -e "\n${RED}State file not found: $state_file${RESET}"
+            echo -e "${DIM}Waiting for file to be created...${RESET}"
+        fi
+
+        sleep "$WATCH_INTERVAL"
+    done
+}
+
+main() {
+    parse_args "$@"
+    init_colors
+    get_terminal_dimensions
+    load_config
+
+    # Find and validate state file
+    local state_file
+    state_file=$(find_latest_state_file)
+
+    if [ "$WATCH_MODE" = "true" ]; then
+        # Watch mode - don't exit on validation errors, keep trying
+        run_watch_mode "$state_file"
+    else
+        # Single run mode
+        validate_state_file "$state_file"
+        render_once "$state_file"
+    fi
 }
 
 main "$@"

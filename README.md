@@ -47,6 +47,8 @@ Visualize token consumption with ASCII charts:
 token-graph                    # Latest session
 token-graph <session_id>       # Specific session
 token-graph --type cumulative  # Only cumulative graph
+token-graph --watch            # Real-time monitoring mode
+token-graph -w 5               # Custom refresh interval (5s)
 ```
 
 ![Token Usage Graph](images/token-graph.png)

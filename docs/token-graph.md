@@ -22,6 +22,17 @@ token-graph --type delta
 # Show both graphs (default)
 token-graph --type both
 
+# Real-time monitoring mode (refreshes every 2 seconds)
+token-graph --watch
+token-graph -w
+
+# Real-time monitoring with custom interval
+token-graph --watch 5
+token-graph -w 3
+
+# Combine options
+token-graph abc123 --type cumulative --watch 3
+
 # Disable colors (for piping to file)
 token-graph --no-color > output.txt
 
@@ -43,6 +54,7 @@ Shows token consumption per interval - useful for identifying usage bursts.
 
 - **Smooth Area Charts**: Continuous lines with gradient-filled areas
 - **Linear Interpolation**: Smooth curves between data points
+- **Real-time Watch Mode**: Built-in `--watch` option for live monitoring
 - **Auto-detect Terminal Size**: Adapts to your terminal
 - **Summary Statistics**: Current tokens, duration, averages
 - **Color Support**: With `--no-color` for piping
@@ -86,13 +98,28 @@ Summary Statistics
 
 ## Real-time Monitoring
 
-Use `watch` to see updates in real-time:
+Use the built-in watch mode for live updates:
+
+```bash
+# Default: refresh every 2 seconds
+token-graph --watch
+
+# Custom interval: refresh every 5 seconds
+token-graph -w 5
+
+# Monitor specific session
+token-graph abc123 --watch
+```
+
+Press `Ctrl+C` to exit watch mode.
+
+![Real-time Token Graph](../images/claude-statusline-token-graph.gif)
+
+Alternatively, use the system `watch` command:
 
 ```bash
 watch -n 2 token-graph <session_id>
 ```
-
-![Real-time Token Graph](../images/claude-statusline-token-graph.gif)
 
 ## Data Source
 
