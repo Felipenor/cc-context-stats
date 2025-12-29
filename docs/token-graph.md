@@ -109,17 +109,44 @@ token-graph -w 5
 
 # Monitor specific session
 token-graph abc123 --watch
+
+# Combine with graph type
+token-graph --type cumulative --watch 3
 ```
 
 Press `Ctrl+C` to exit watch mode.
 
+### Watch Mode Features
+
+- **Flicker-free updates**: Uses cursor repositioning for smooth redraws
+- **Live timestamp**: Shows `[LIVE HH:MM:SS]` indicator in header
+- **Hidden cursor**: Clean display without cursor blinking
+- **Terminal resize**: Adapts to terminal size changes automatically
+- **Graceful waiting**: Handles missing or incomplete data files
+
+### Example Watch Mode Output
+
+```
+[LIVE 14:32:15] Refresh: 2s | Ctrl+C to exit
+
+Token Usage Graphs (Session: abc123)
+
+Cumulative Token Usage
+Max: 85,000  Min: 10,000  Points: 15
+...
+```
+
 ![Real-time Token Graph](../images/claude-statusline-token-graph.gif)
 
-Alternatively, use the system `watch` command:
+### Alternative: System Watch Command
+
+You can also use the system `watch` command:
 
 ```bash
 watch -n 2 token-graph <session_id>
 ```
+
+However, the built-in `--watch` mode provides smoother updates without flickering.
 
 ## Data Source
 
