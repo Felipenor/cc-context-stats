@@ -295,7 +295,10 @@ load_token_history() {
         error_exit "Loaded only $valid_lines valid data points. Need at least 2."
     fi
 
-    info "Loaded $valid_lines data points from $(basename "$file")"
+    # Only show info message in non-watch mode
+    if [ "$WATCH_MODE" != "true" ]; then
+        info "Loaded $valid_lines data points from $(basename "$file")"
+    fi
 }
 
 calculate_deltas() {
@@ -669,23 +672,33 @@ render_once() {
 run_watch_mode() {
     local state_file=$1
 
-    # Set up signal handler for clean exit
-    trap 'printf "\n${DIM}Watch mode stopped.${RESET}\n"; exit 0' INT TERM
+    # ANSI escape codes for cursor control
+    local CURSOR_HOME='\033[H'
+    local CLEAR_SCREEN='\033[2J'
+    local HIDE_CURSOR='\033[?25l'
+    local SHOW_CURSOR='\033[?25h'
 
-    echo -e "${DIM}Watch mode: refreshing every ${WATCH_INTERVAL}s (Ctrl+C to exit)${RESET}"
-    sleep 1
+    # Set up signal handler for clean exit
+    trap 'printf "${SHOW_CURSOR}\n${DIM}Watch mode stopped.${RESET}\n"; exit 0' INT TERM
+
+    # Hide cursor for cleaner display
+    printf "${HIDE_CURSOR}"
+
+    # Initial clear
+    printf "${CLEAR_SCREEN}${CURSOR_HOME}"
 
     while true; do
-        # Clear screen
-        clear
+        # Move cursor to home position (top-left) instead of clearing
+        # This prevents flickering by overwriting in place
+        printf "${CURSOR_HOME}"
 
         # Re-read terminal dimensions in case of resize
         get_terminal_dimensions
 
-        # Show watch mode indicator
+        # Show watch mode indicator with live timestamp
         local current_time
         current_time=$(date +%H:%M:%S)
-        echo -e "${DIM}[Watch mode: ${current_time} | Refresh: ${WATCH_INTERVAL}s | Ctrl+C to exit]${RESET}"
+        printf "${DIM}[LIVE ${current_time}] Refresh: ${WATCH_INTERVAL}s | Ctrl+C to exit${RESET}\n"
 
         # Re-validate and render (file might have new data)
         if [ -f "$state_file" ]; then
@@ -694,13 +707,16 @@ run_watch_mode() {
             if [ "$line_count" -ge 2 ]; then
                 render_once "$state_file"
             else
-                echo -e "\n${YELLOW}Waiting for more data points...${RESET}"
-                echo -e "${DIM}Current: $line_count point(s), need at least 2${RESET}"
+                printf "\n${YELLOW}Waiting for more data points...${RESET}\n"
+                printf "${DIM}Current: $line_count point(s), need at least 2${RESET}\n"
             fi
         else
-            echo -e "\n${RED}State file not found: $state_file${RESET}"
-            echo -e "${DIM}Waiting for file to be created...${RESET}"
+            printf "\n${RED}State file not found: $state_file${RESET}\n"
+            printf "${DIM}Waiting for file to be created...${RESET}\n"
         fi
+
+        # Clear any remaining lines from previous render (in case terminal resized smaller)
+        printf "\033[J"
 
         sleep "$WATCH_INTERVAL"
     done
