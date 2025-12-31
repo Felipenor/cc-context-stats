@@ -573,6 +573,15 @@ render_summary() {
     echo ""
 }
 
+render_footer() {
+    # Get short git commit hash for version display
+    local commit_hash
+    commit_hash=$(git -C "$(dirname "$0")" rev-parse --short HEAD 2>/dev/null || echo "unknown")
+
+    echo -e "${DIM}Powered by claude-statusline v${VERSION}-${commit_hash} - https://github.com/luongnv89/claude-statusline${RESET}"
+    echo ""
+}
+
 # === ARGUMENT PARSING ===
 
 parse_args() {
@@ -682,6 +691,9 @@ render_once() {
 
     # Render summary
     render_summary
+
+    # Render footer
+    render_footer
 }
 
 # Watch mode - continuously refresh the display
