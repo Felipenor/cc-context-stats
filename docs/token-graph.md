@@ -57,6 +57,7 @@ Shows token consumption per interval - useful for identifying usage bursts.
 - **Real-time Watch Mode**: Built-in `--watch` option for live monitoring
 - **Auto-detect Terminal Size**: Adapts to your terminal
 - **Summary Statistics**: Current tokens, duration, averages
+- **Version Footer**: Shows version and project link at the bottom
 - **Color Support**: With `--no-color` for piping
 - **Bash 3.2+ Compatible**: Works on macOS default bash
 
@@ -84,6 +85,8 @@ Summary Statistics
   Average Delta:       5,454
   Max Delta:           14,000
   Total Growth:        110,000
+
+Powered by claude-statusline v1.0.0-abc123 - https://github.com/luongnv89/claude-statusline
 ```
 
 ## Graph Symbols
