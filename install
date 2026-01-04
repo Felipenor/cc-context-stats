@@ -27,16 +27,19 @@ GITHUB_API_URL="https://api.github.com/repos/luongnv89/claude-statusline"
 
 # Detect if running from pipe (curl) or locally
 detect_install_mode() {
-    if [ -t 0 ] && [ -n "${BASH_SOURCE[0]}" ] && [ -f "${BASH_SOURCE[0]}" ]; then
-        # Running locally from a file
+    # Check if we have a valid script file with scripts directory
+    if [ -n "${BASH_SOURCE[0]}" ] && [ -f "${BASH_SOURCE[0]}" ]; then
         SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
         if [ -d "$SCRIPT_DIR/scripts" ]; then
             INSTALL_MODE="local"
+            INTERACTIVE=true
+            [ -t 0 ] || INTERACTIVE=false
             return
         fi
     fi
     # Running from curl/pipe or script directory not found
     INSTALL_MODE="remote"
+    INTERACTIVE=false
 }
 
 echo -e "${BLUE}Claude Code Status Line Installer${RESET}"
@@ -77,11 +80,7 @@ check_jq() {
             echo "         or: sudo yum install jq (RHEL/CentOS)"
         fi
         echo
-        # In remote mode, we can't prompt, so suggest Python/Node
-        if [ "$INSTALL_MODE" = "remote" ]; then
-            echo "Consider using Python (option 4) or Node.js (option 5) which don't require jq."
-            echo
-        else
+        if [ "$INTERACTIVE" = true ]; then
             read -p "Continue anyway? (y/n) " -n 1 -r
             echo
             if [[ ! $REPLY =~ ^[Yy]$ ]]; then
@@ -126,11 +125,9 @@ select_script() {
     echo "  5) node     - Node.js version (full featured)"
     echo
 
-    # Check if running interactively
-    if [ -t 0 ]; then
+    if [ "$INTERACTIVE" = true ]; then
         read -rp "Select script [1-5, default: 3]: " choice
     else
-        # Non-interactive mode (piped), use default
         echo "Non-interactive mode detected. Using default: full (3)"
         choice=3
     fi
@@ -183,7 +180,7 @@ install_script() {
     if [ -f "$DEST" ]; then
         echo
         echo -e "${YELLOW}Warning: $DEST already exists${RESET}"
-        if [ -t 0 ]; then
+        if [ "$INTERACTIVE" = true ]; then
             read -p "Overwrite? (y/n) " -n 1 -r
             echo
             if [[ ! $REPLY =~ ^[Yy]$ ]]; then
@@ -218,7 +215,7 @@ install_token_graph() {
 
     if [ -f "$DEST" ]; then
         echo -e "${YELLOW}Warning: $DEST already exists${RESET}"
-        if [ -t 0 ]; then
+        if [ "$INTERACTIVE" = true ]; then
             read -p "Overwrite? (y/n) " -n 1 -r
             echo
             if [[ ! $REPLY =~ ^[Yy]$ ]]; then
