@@ -137,21 +137,6 @@ ensure_claude_dir() {
 install_script() {
     DEST="$CLAUDE_DIR/$SCRIPT_NAME"
 
-    if [ -f "$DEST" ]; then
-        echo
-        echo -e "${YELLOW}Warning: $DEST already exists${RESET}"
-        if [ "$INTERACTIVE" = true ]; then
-            read -p "Overwrite? (y/n) " -n 1 -r
-            echo
-            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-                echo "Keeping existing script."
-                return
-            fi
-        else
-            echo "Overwriting in non-interactive mode..."
-        fi
-    fi
-
     if [ "$INSTALL_MODE" = "local" ]; then
         cp "$SCRIPT_SRC" "$DEST"
         chmod +x "$DEST"
@@ -162,30 +147,13 @@ install_script() {
 }
 
 # Install context-stats CLI tool
-install_token_graph() {
-    echo
-
+install_context_stats() {
     # Create ~/.local/bin if it doesn't exist
     if [ ! -d "$LOCAL_BIN" ]; then
-        echo -e "${YELLOW}Creating $LOCAL_BIN directory...${RESET}"
         mkdir -p "$LOCAL_BIN"
     fi
 
     DEST="$LOCAL_BIN/context-stats"
-
-    if [ -f "$DEST" ]; then
-        echo -e "${YELLOW}Warning: $DEST already exists${RESET}"
-        if [ "$INTERACTIVE" = true ]; then
-            read -p "Overwrite? (y/n) " -n 1 -r
-            echo
-            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-                echo "Keeping existing context-stats."
-                return
-            fi
-        else
-            echo "Overwriting in non-interactive mode..."
-        fi
-    fi
 
     # Get commit hash for version embedding
     local commit_hash
@@ -200,7 +168,7 @@ install_token_graph() {
     # Embed commit hash
     sed -i.bak "s/COMMIT_HASH=\"dev\"/COMMIT_HASH=\"$commit_hash\"/" "$DEST" && rm -f "$DEST.bak"
     chmod +x "$DEST"
-    echo -e "${GREEN}✓${RESET} Installed: $DEST (v1.0.0-$commit_hash)"
+    echo -e "${GREEN}✓${RESET} Installed: $DEST"
 
     # Check if ~/.local/bin is in PATH
     if [[ ":$PATH:" != *":$LOCAL_BIN:"* ]]; then
@@ -285,7 +253,7 @@ main() {
     ensure_claude_dir
     select_script
     install_script
-    install_token_graph
+    install_context_stats
     create_config
     update_settings
 
