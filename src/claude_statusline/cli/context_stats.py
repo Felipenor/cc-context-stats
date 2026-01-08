@@ -49,10 +49,10 @@ ARGUMENTS:
 
 OPTIONS:
     --type <type>  Graph type to display:
-                   - cumulative: Total tokens over time
-                   - delta: Token consumption per interval
+                   - delta: Context growth per interaction (default)
+                   - cumulative: Total context usage over time
                    - io: Input/output tokens over time
-                   - both: Show cumulative and delta graphs (default)
+                   - both: Show cumulative and delta graphs
                    - all: Show all graphs including I/O
     -w [interval]  Set refresh interval in seconds (default: 2)
     --no-watch     Show graphs once and exit (disable live monitoring)
@@ -101,8 +101,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--type",
         choices=["cumulative", "delta", "io", "both", "all"],
-        default="both",
-        help="Graph type to display",
+        default="delta",
+        help="Graph type to display (default: delta)",
     )
     parser.add_argument(
         "--watch",
