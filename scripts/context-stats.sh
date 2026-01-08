@@ -22,7 +22,7 @@
 
 # === CONFIGURATION ===
 # shellcheck disable=SC2034
-VERSION="1.2.2"
+VERSION="1.2.3"
 COMMIT_HASH="dev" # Will be replaced during installation
 STATE_DIR=~/.claude/statusline
 CONFIG_FILE=~/.claude/statusline.conf
