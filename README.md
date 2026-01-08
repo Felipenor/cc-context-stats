@@ -4,7 +4,7 @@
 [![Downloads](https://img.shields.io/pypi/dm/cc-context-stats)](https://pypi.org/project/cc-context-stats/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Never run out of context unexpectedly** - monitor your Claude Code tokens in real-time.
+**Never run out of context unexpectedly** - monitor your session context in real-time.
 
 ![Context Stats](images/token-graph.jpeg)
 

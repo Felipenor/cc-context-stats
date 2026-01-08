@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "cc-context-stats"
 version = "1.1.0"
-description = "Never run out of context unexpectedly - monitor your Claude Code tokens in real-time"
+description = "Never run out of context unexpectedly - monitor your session context in real-time"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.9"

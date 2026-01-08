@@ -1,6 +1,6 @@
 """Claude Code Context Stats.
 
-Never run out of context unexpectedly - monitor your Claude Code tokens in real-time.
+Never run out of context unexpectedly - monitor your session context in real-time.
 """
 
 __version__ = "1.1.0"
