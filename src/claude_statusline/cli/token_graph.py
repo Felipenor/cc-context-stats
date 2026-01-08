@@ -220,24 +220,24 @@ def run_watch_mode(
         colors: ColorManager instance
     """
     # Signal handler for clean exit
-    def handle_signal(signum: int, frame: object) -> None:
-        print(f"{SHOW_CURSOR}")
+    def handle_signal(_signum: int, _frame: object) -> None:
+        sys.stdout.write(SHOW_CURSOR)
+        sys.stdout.flush()
         print(f"\n{colors.dim}Watch mode stopped.{colors.reset}")
         sys.exit(0)
 
     signal.signal(signal.SIGINT, handle_signal)
     signal.signal(signal.SIGTERM, handle_signal)
 
-    # Hide cursor
-    print(HIDE_CURSOR, end="", flush=True)
-
-    # Initial clear
-    print(f"{CLEAR_SCREEN}{CURSOR_HOME}", end="", flush=True)
+    # Hide cursor and initial clear in one write
+    sys.stdout.write(f"{HIDE_CURSOR}{CLEAR_SCREEN}{CURSOR_HOME}")
+    sys.stdout.flush()
 
     try:
         while True:
             # Move cursor to home
-            print(CURSOR_HOME, end="", flush=True)
+            sys.stdout.write(CURSOR_HOME)
+            sys.stdout.flush()
 
             # Update dimensions in case of terminal resize
             renderer.dimensions = GraphDimensions.detect()
@@ -252,11 +252,13 @@ def run_watch_mode(
             render_once(state_file, graph_type, renderer, colors, watch_mode=True)
 
             # Clear any remaining content
-            print(CLEAR_TO_END, end="", flush=True)
+            sys.stdout.write(CLEAR_TO_END)
+            sys.stdout.flush()
 
             time.sleep(interval)
     finally:
-        print(SHOW_CURSOR, end="", flush=True)
+        sys.stdout.write(SHOW_CURSOR)
+        sys.stdout.flush()
 
 
 def main() -> None:

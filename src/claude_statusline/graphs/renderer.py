@@ -5,12 +5,7 @@ from __future__ import annotations
 import shutil
 from dataclasses import dataclass
 
-from claude_statusline.core.colors import (
-    BLUE,
-    GREEN,
-    MAGENTA,
-    ColorManager,
-)
+from claude_statusline.core.colors import ColorManager
 from claude_statusline.formatters.tokens import format_tokens
 from claude_statusline.formatters.time import format_timestamp, format_duration
 from claude_statusline.graphs.statistics import Stats, calculate_stats
@@ -262,12 +257,13 @@ class GraphRenderer:
         # Delta statistics
         delta_stats = calculate_stats(deltas) if deltas else Stats(0, 0, 0, 0, 0)
 
-        # Context window info
+        # Context window info - use current_used_tokens which represents actual context usage
         remaining_context = 0
         context_percentage = 0
         if last.context_window_size > 0:
-            total_used = last.total_input_tokens + last.total_output_tokens
-            remaining_context = last.context_window_size - total_used
+            # current_used_tokens = current_input_tokens + cache_creation + cache_read
+            current_used = last.current_used_tokens
+            remaining_context = max(0, last.context_window_size - current_used)
             context_percentage = remaining_context * 100 // last.context_window_size
 
         print()
@@ -280,16 +276,16 @@ class GraphRenderer:
             f"{format_tokens(last.total_tokens, self.token_detail)}"
         )
         print(
-            f"  {BLUE}{'Input Tokens (↓):':<20}{self.colors.reset} "
+            f"  {self.colors.blue}{'Input Tokens (↓):':<20}{self.colors.reset} "
             f"{format_tokens(last.total_input_tokens, self.token_detail)}"
         )
         print(
-            f"  {MAGENTA}{'Output Tokens (↑):':<20}{self.colors.reset} "
+            f"  {self.colors.magenta}{'Output Tokens (↑):':<20}{self.colors.reset} "
             f"{format_tokens(last.total_output_tokens, self.token_detail)}"
         )
         if last.context_window_size > 0:
             print(
-                f"  {GREEN}{'Remaining Context:':<20}{self.colors.reset} "
+                f"  {self.colors.green}{'Remaining Context:':<20}{self.colors.reset} "
                 f"{format_tokens(remaining_context, self.token_detail)} ({context_percentage}%)"
             )
         print(
