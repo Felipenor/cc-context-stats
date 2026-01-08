@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2025-01-08
+
+### Changed
+
+- **Watch mode enabled by default** - `context-stats` now runs in live monitoring mode (2s refresh)
+- Added `--no-watch` flag to show graphs once and exit
+- Simplified installer - no script selection, auto-overwrite existing files
+
 ## [1.1.0] - 2025-01-08
 
 ### Changed
