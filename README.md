@@ -12,7 +12,28 @@ Custom status line scripts for [Claude Code](https://claude.com/claude-code).
 
 ## Quick Start
 
-### One-Line Install (Recommended)
+### Install via pip/uv (Recommended)
+
+```bash
+# Using pip
+pip install cc-statusline
+
+# Using uv
+uv pip install cc-statusline
+```
+
+After installation, add to `~/.claude/settings.json`:
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "claude-statusline"
+  }
+}
+```
+
+### One-Line Install (Shell Scripts)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/luongnv89/claude-statusline/main/install.sh | bash
@@ -23,7 +44,9 @@ curl -fsSL https://raw.githubusercontent.com/luongnv89/claude-statusline/main/in
 ```bash
 git clone https://github.com/luongnv89/claude-statusline.git
 cd claude-statusline
-./install.sh
+pip install -e .  # For development
+# OR
+./install.sh      # For shell script installation
 ```
 
 Restart Claude Code to see your status line.
@@ -31,10 +54,11 @@ Restart Claude Code to see your status line.
 ### Windows
 
 ```powershell
-copy scripts\statusline.py %USERPROFILE%\.claude\statusline.py
+pip install cc-statusline
+# Then configure settings.json as shown above
 ```
 
-See [Installation Guide](docs/installation.md) for manual setup and Windows configuration.
+See [Installation Guide](docs/installation.md) for manual setup and configuration options.
 
 ## Features
 
