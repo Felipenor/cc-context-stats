@@ -53,16 +53,24 @@ OPTIONS:
                    - io: Input/output tokens over time
                    - both: Show cumulative and delta graphs (default)
                    - all: Show all graphs including I/O
-    --watch, -w [interval]
-                   Enable real-time monitoring mode.
-                   Refreshes the graph every [interval] seconds (default: 2).
-                   Press Ctrl+C to exit.
+    -w [interval]  Set refresh interval in seconds (default: 2)
+    --no-watch     Show graphs once and exit (disable live monitoring)
     --no-color     Disable color output
     --help         Show this help message
 
+NOTE:
+    By default, context-stats runs in live monitoring mode, refreshing every 2 seconds.
+    Press Ctrl+C to exit. Use --no-watch to display graphs once and exit.
+
 EXAMPLES:
-    # Show graphs for latest session
+    # Live monitoring (default, refreshes every 2s)
     context-stats
+
+    # Live monitoring with custom interval
+    context-stats -w 5
+
+    # Show graphs once and exit
+    context-stats --no-watch
 
     # Show graphs for specific session
     context-stats abc123def
@@ -70,20 +78,11 @@ EXAMPLES:
     # Show only cumulative graph
     context-stats --type cumulative
 
-    # Show input/output token graphs
-    context-stats --type io
-
-    # Real-time monitoring (refresh every 2 seconds)
-    context-stats --watch
-
-    # Real-time monitoring with custom interval
-    context-stats -w 5
-
     # Combine options
-    context-stats abc123 --type cumulative --watch 3
+    context-stats abc123 --type cumulative -w 3
 
-    # Disable colors for piping to file
-    context-stats --no-color > output.txt
+    # Output to file (no colors, single run)
+    context-stats --no-watch --no-color > output.txt
 
 DATA SOURCE:
     Reads token history from ~/.claude/statusline/statusline.<session_id>.state
@@ -110,8 +109,13 @@ def parse_args() -> argparse.Namespace:
         nargs="?",
         const=2,
         type=int,
-        default=None,
-        help="Watch mode interval in seconds",
+        default=2,
+        help="Watch mode interval in seconds (default: 2, use --no-watch to disable)",
+    )
+    parser.add_argument(
+        "--no-watch",
+        action="store_true",
+        help="Disable watch mode (show graphs once and exit)",
     )
     parser.add_argument(
         "--no-color",
@@ -291,12 +295,12 @@ def main() -> None:
     )
 
     # Run
-    if args.watch is not None:
-        run_watch_mode(state_file, args.type, args.watch, renderer, colors)
-    else:
+    if args.no_watch:
         success = render_once(state_file, args.type, renderer, colors)
         if not success:
             sys.exit(1)
+    else:
+        run_watch_mode(state_file, args.type, args.watch, renderer, colors)
 
 
 if __name__ == "__main__":
