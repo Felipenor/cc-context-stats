@@ -6,7 +6,7 @@
 
 **Never run out of context unexpectedly** - monitor your session context in real-time.
 
-![Context Stats](images/context-status.png)
+![Context Stats](images/context-status-dumbzone.png)
 
 ## Why Context Stats?
 
@@ -100,11 +100,15 @@ Max: 4,787  Min: 0  Points: 254
 
 Session Summary
 ----------------------------------------------------------------------------
+  Context Remaining:   43,038/200,000 (21%)
   >>> DUMB ZONE <<< (You are in the dumb zone - Dex Horthy says so)
 
-  Context Remaining:   43,038 (21%)
-  Input Tokens:        59,015
-  Output Tokens:       43,429
+  Last Growth:         +2,500
+  Input Tokens:        1,234
+  Output Tokens:       567
+  Lines Changed:       +45 / -12
+  Total Cost:          $0.1234
+  Model:               claude-sonnet-4-20250514
   Session Duration:    2h 29m
 ```
 
