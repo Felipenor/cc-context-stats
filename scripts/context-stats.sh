@@ -399,7 +399,8 @@ calculate_deltas() {
     DELTAS=""
     DELTA_TIMES=""
 
-    for tok in $TOKENS; do
+    # Use CURRENT_USED_TOKENS (actual context usage) for delta calculation
+    for tok in $CURRENT_USED_TOKENS; do
         idx=$((idx + 1))
         if [ -z "$prev_tok" ]; then
             # Skip first data point - no previous value to compare against
@@ -811,10 +812,10 @@ render_once() {
         echo -e "${BOLD}${MAGENTA}Context Stats${RESET} ${DIM}(Session: $session_name)${RESET}"
     fi
 
-    # Render graphs
+    # Render graphs (use CURRENT_USED_TOKENS for actual context window usage)
     case "$GRAPH_TYPE" in
     cumulative)
-        render_timeseries_graph "Context Usage Over Time" "$TOKENS" "$TIMESTAMPS" "$GREEN"
+        render_timeseries_graph "Context Usage Over Time" "$CURRENT_USED_TOKENS" "$TIMESTAMPS" "$GREEN"
         ;;
     delta)
         render_timeseries_graph "Context Growth Per Interaction" "$DELTAS" "$DELTA_TIMES" "$CYAN"
@@ -824,13 +825,13 @@ render_once() {
         render_timeseries_graph "Output Tokens (↑)" "$OUTPUT_TOKENS" "$TIMESTAMPS" "$MAGENTA"
         ;;
     both)
-        render_timeseries_graph "Context Usage Over Time" "$TOKENS" "$TIMESTAMPS" "$GREEN"
+        render_timeseries_graph "Context Usage Over Time" "$CURRENT_USED_TOKENS" "$TIMESTAMPS" "$GREEN"
         render_timeseries_graph "Context Growth Per Interaction" "$DELTAS" "$DELTA_TIMES" "$CYAN"
         ;;
     all)
         render_timeseries_graph "Input Tokens (↓)" "$INPUT_TOKENS" "$TIMESTAMPS" "$BLUE"
         render_timeseries_graph "Output Tokens (↑)" "$OUTPUT_TOKENS" "$TIMESTAMPS" "$MAGENTA"
-        render_timeseries_graph "Context Usage Over Time" "$TOKENS" "$TIMESTAMPS" "$GREEN"
+        render_timeseries_graph "Context Usage Over Time" "$CURRENT_USED_TOKENS" "$TIMESTAMPS" "$GREEN"
         render_timeseries_graph "Context Growth Per Interaction" "$DELTAS" "$DELTA_TIMES" "$CYAN"
         ;;
     esac

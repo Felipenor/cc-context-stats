@@ -172,7 +172,9 @@ def render_once(
     tokens = [e.total_tokens for e in entries]
     input_tokens = [e.total_input_tokens for e in entries]
     output_tokens = [e.total_output_tokens for e in entries]
-    deltas = calculate_deltas(tokens)
+    # Current context window usage (what's actually in the context)
+    context_used = [e.current_used_tokens for e in entries]
+    deltas = calculate_deltas(context_used)
     delta_times = timestamps[1:]  # Deltas start from second entry
 
     # Get session name and project from entries
@@ -202,7 +204,7 @@ def render_once(
 
     # Render requested graphs
     if graph_type in ("cumulative", "both", "all"):
-        renderer.render_timeseries(tokens, timestamps, "Context Usage Over Time", colors.green)
+        renderer.render_timeseries(context_used, timestamps, "Context Usage Over Time", colors.green)
 
     if graph_type in ("delta", "both", "all"):
         renderer.render_timeseries(
