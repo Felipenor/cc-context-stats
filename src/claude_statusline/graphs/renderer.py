@@ -295,7 +295,12 @@ class GraphRenderer:
             # Color the remaining context based on status
             print(
                 f"  {status_color}{'Context Remaining:':<20}{self.colors.reset} "
-                f"{format_tokens(remaining_context, self.token_detail)} ({remaining_percentage}%)"
+                f"{format_tokens(remaining_context, self.token_detail)}/{format_tokens(last.context_window_size, self.token_detail)} ({remaining_percentage}%)"
+            )
+        if last.model_id:
+            print(
+                f"  {self.colors.dim}{'Model:':<20}{self.colors.reset} "
+                f"{last.model_id}"
             )
         print(
             f"  {self.colors.blue}{'Input Tokens:':<20}{self.colors.reset} "

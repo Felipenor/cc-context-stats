@@ -22,7 +22,7 @@
 
 # === CONFIGURATION ===
 # shellcheck disable=SC2034
-VERSION="1.0.0"
+VERSION="1.2.2"
 COMMIT_HASH="dev" # Will be replaced during installation
 STATE_DIR=~/.claude/statusline
 CONFIG_FILE=~/.claude/statusline.conf
@@ -52,10 +52,10 @@ TERM_HEIGHT=24
 GRAPH_WIDTH=60
 GRAPH_HEIGHT=15
 SESSION_ID=""
-GRAPH_TYPE="both"
+GRAPH_TYPE="delta"
 COLOR_ENABLED=true
 TOKEN_DETAIL_ENABLED=true
-WATCH_MODE=false
+WATCH_MODE=true
 WATCH_INTERVAL=2
 
 # === UTILITY FUNCTIONS ===
@@ -72,46 +72,44 @@ ARGUMENTS:
 
 OPTIONS:
     --type <type>  Graph type to display:
-                   - cumulative: Total tokens over time
-                   - delta: Token consumption per interval
+                   - delta: Context growth per interaction (default)
+                   - cumulative: Total context usage over time
                    - io: Input/output tokens over time
-                   - both: Show cumulative and delta graphs (default)
+                   - both: Show cumulative and delta graphs
                    - all: Show all graphs including I/O
-    --watch, -w [interval]
-                   Enable real-time monitoring mode.
-                   Refreshes the graph every [interval] seconds (default: 2).
-                   Press Ctrl+C to exit.
+    -w [interval]  Set refresh interval in seconds (default: 2)
+    --no-watch     Show graphs once and exit (disable live monitoring)
     --no-color     Disable color output
     --help         Show this help message
 
+NOTE:
+    By default, context-stats runs in live monitoring mode, refreshing every 2 seconds.
+    Press Ctrl+C to exit. Use --no-watch to display graphs once and exit.
+
 EXAMPLES:
-    # Show graphs for latest session
+    # Live monitoring (default, refreshes every 2s)
     context-stats.sh
+
+    # Live monitoring with custom interval
+    context-stats.sh -w 5
+
+    # Show graphs once and exit
+    context-stats.sh --no-watch
 
     # Show graphs for specific session
     context-stats.sh abc123def
 
-    # Show only cumulative graph
+    # Show cumulative graph instead of delta
     context-stats.sh --type cumulative
 
-    # Show input/output token graphs
-    context-stats.sh --type io
-
-    # Real-time monitoring (refresh every 2 seconds)
-    context-stats.sh --watch
-
-    # Real-time monitoring with custom interval
-    context-stats.sh -w 5
-
     # Combine options
-    context-stats.sh abc123 --type cumulative --watch 3
+    context-stats.sh abc123 --type cumulative -w 3
 
-    # Disable colors for piping to file
-    context-stats.sh --no-color > output.txt
+    # Output to file (no colors, single run)
+    context-stats.sh --no-watch --no-color > output.txt
 
 DATA SOURCE:
     Reads token history from ~/.claude/statusline/statusline.<session_id>.state
-    CSV format: timestamp,total_input_tokens,total_output_tokens,current_usage_input_tokens,...
 
 EOF
 }
@@ -127,6 +125,24 @@ warn() {
 
 info() {
     echo -e "${DIM}$1${RESET}"
+}
+
+show_waiting_message() {
+    local session_id=$1
+    local message=${2:-"Waiting for session data..."}
+
+    echo ""
+    if [ -n "$session_id" ]; then
+        echo -e "${BOLD}${MAGENTA}Context Stats${RESET} ${DIM}(Session: $session_id)${RESET}"
+    else
+        echo -e "${BOLD}${MAGENTA}Context Stats${RESET}"
+    fi
+    echo ""
+    echo -e "  ${CYAN}⏳ ${message}${RESET}"
+    echo ""
+    echo -e "  ${DIM}The session has just started and no data has been recorded yet.${RESET}"
+    echo -e "  ${DIM}Data will appear after the first Claude interaction.${RESET}"
+    echo ""
 }
 
 init_colors() {
@@ -224,14 +240,10 @@ find_latest_state_file() {
     migrate_old_state_files
 
     if [ -n "$SESSION_ID" ]; then
-        # Specific session requested
+        # Specific session requested - return path even if file doesn't exist yet
         local file="$STATE_DIR/statusline.${SESSION_ID}.state"
-        if [ -f "$file" ]; then
-            echo "$file"
-            return 0
-        else
-            error_exit "State file not found: $file"
-        fi
+        echo "$file"
+        return 0
     fi
 
     # Find most recent state file
@@ -244,7 +256,8 @@ find_latest_state_file() {
             echo "$STATE_DIR/statusline.state"
             return 0
         fi
-        error_exit "No state files found in $STATE_DIR/\nRun Claude Code to generate token usage data."
+        # Return empty - no state files found
+        return 1
     fi
 
     echo "$latest"
@@ -280,6 +293,9 @@ load_token_history() {
     INPUT_TOKENS=""
     OUTPUT_TOKENS=""
     CONTEXT_SIZES=""
+    CURRENT_USED_TOKENS=""
+    LAST_MODEL_ID=""
+    LAST_PROJECT_DIR=""
     DATA_COUNT=0
 
     while IFS=',' read -r ts total_in total_out cur_in cur_out cache_creation cache_read cost_usd lines_added lines_removed session_id model_id workspace_project_dir context_size rest || [ -n "$ts" ]; do
@@ -318,9 +334,21 @@ load_token_history() {
         case "$total_out" in
         '' | *[!0-9]*) total_out=0 ;;
         esac
+        case "$cur_in" in
+        '' | *[!0-9]*) cur_in=0 ;;
+        esac
+        case "$cache_creation" in
+        '' | *[!0-9]*) cache_creation=0 ;;
+        esac
+        case "$cache_read" in
+        '' | *[!0-9]*) cache_read=0 ;;
+        esac
 
         # Calculate combined tokens for backward compatibility
         local combined=$((total_in + total_out))
+
+        # Calculate current context usage (what's actually in the context window)
+        local current_used=$((cur_in + cache_creation + cache_read))
 
         # Validate context size (new format)
         case "$context_size" in
@@ -334,13 +362,18 @@ load_token_history() {
             INPUT_TOKENS="$total_in"
             OUTPUT_TOKENS="$total_out"
             CONTEXT_SIZES="$context_size"
+            CURRENT_USED_TOKENS="$current_used"
         else
             TIMESTAMPS="$TIMESTAMPS $ts"
             TOKENS="$TOKENS $combined"
             INPUT_TOKENS="$INPUT_TOKENS $total_in"
             OUTPUT_TOKENS="$OUTPUT_TOKENS $total_out"
             CONTEXT_SIZES="$CONTEXT_SIZES $context_size"
+            CURRENT_USED_TOKENS="$CURRENT_USED_TOKENS $current_used"
         fi
+        # Store model_id and project_dir (last ones will be kept)
+        LAST_MODEL_ID="$model_id"
+        LAST_PROJECT_DIR="$workspace_project_dir"
         valid_lines=$((valid_lines + 1))
     done <"$file"
 
@@ -571,18 +604,18 @@ render_timeseries_graph() {
 
         local row
         row=$(echo "$grid_output" | sed -n "$((r + 1))p")
-        printf "%10s ${DIM}│${RESET}${color}%s${RESET}\n" "$label" "$row"
+        printf '%10s %b│%b%b%s%b\n' "$label" "${DIM}" "${RESET}" "${color}" "$row" "${RESET}"
         r=$((r + 1))
     done
 
     # X-axis
-    printf "%10s ${DIM}└" ""
+    printf '%10s %b└' "" "${DIM}"
     local c=0
     while [ $c -lt $GRAPH_WIDTH ]; do
         printf "─"
         c=$((c + 1))
     done
-    printf "%s\n" "${RESET}"
+    printf '%b\n' "${RESET}"
 
     # Time labels
     local first_time last_time mid_time
@@ -591,7 +624,7 @@ render_timeseries_graph() {
     local mid_idx=$(((n + 1) / 2))
     mid_time=$(format_timestamp "$(get_element "$times" "$mid_idx")")
 
-    printf "%11s${DIM}%-*s%s%*s${RESET}\n" "" "$((GRAPH_WIDTH / 3))" "$first_time" "$mid_time" "$((GRAPH_WIDTH / 3))" "$last_time"
+    printf '%11s%b%-*s%s%*s%b\n' "" "${DIM}" "$((GRAPH_WIDTH / 3))" "$first_time" "$mid_time" "$((GRAPH_WIDTH / 3))" "$last_time" "${RESET}"
 }
 
 render_summary() {
@@ -604,15 +637,18 @@ render_summary() {
     first_tokens=$(get_element "$TOKENS" 1)
     total_growth=$((current_tokens - first_tokens))
 
-    # Get I/O token stats
+    # Get I/O token stats (cumulative totals for display)
     local current_input current_output
     current_input=$(get_element "$INPUT_TOKENS" "$DATA_COUNT")
     current_output=$(get_element "$OUTPUT_TOKENS" "$DATA_COUNT")
     current_context=$(get_element "$CONTEXT_SIZES" "$DATA_COUNT")
 
+    # Get actual context window usage (current_input + cache_creation + cache_read)
+    local current_used
+    current_used=$(get_element "$CURRENT_USED_TOKENS" "$DATA_COUNT")
+
     # Calculate remaining context window
-    local total_used=$((current_input + current_output))
-    local remaining_context=$((current_context - total_used))
+    local remaining_context=$((current_context - current_used))
     local context_percentage=0
     if [ "$current_context" -gt 0 ]; then
         context_percentage=$((remaining_context * 100 / current_context))
@@ -628,13 +664,13 @@ render_summary() {
     echo ""
     echo -e "${BOLD}Session Summary${RESET}"
     local line_width=$((GRAPH_WIDTH + 11))
-    printf "%s" "${DIM}"
+    printf '%b' "${DIM}"
     local i=0
     while [ $i -lt $line_width ]; do
         printf "-"
         i=$((i + 1))
     done
-    printf "%s\n" "${RESET}"
+    printf '%b\n' "${RESET}"
 
     # Determine status zone based on context usage
     if [ "$current_context" -gt 0 ]; then
@@ -653,13 +689,16 @@ render_summary() {
             status_text="WRAP UP ZONE"
             status_hint="Better to wrap up and start a new session"
         fi
-        printf "  %s%s>>> %s <<<%s %s(%s)%s\n" "${status_color}" "${BOLD}" "$status_text" "${RESET}" "${DIM}" "$status_hint" "${RESET}"
+        printf '  %b%b>>> %s <<<%b %b(%s)%b\n' "${status_color}" "${BOLD}" "$status_text" "${RESET}" "${DIM}" "$status_hint" "${RESET}"
         echo ""
-        printf "  %s%-20s%s %s (%s%%)\n" "${status_color}" "Context Remaining:" "${RESET}" "$(format_number "$remaining_context")" "$context_percentage"
+        printf '  %b%-20s%b %s/%s (%s%%)\n' "${status_color}" "Context Remaining:" "${RESET}" "$(format_number "$remaining_context")" "$(format_number "$current_context")" "$context_percentage"
     fi
-    printf "  ${BLUE}%-20s${RESET} %s\n" "Input Tokens:" "$(format_number "$current_input")"
-    printf "  ${MAGENTA}%-20s${RESET} %s\n" "Output Tokens:" "$(format_number "$current_output")"
-    printf "  ${CYAN}%-20s${RESET} %s\n" "Session Duration:" "$(format_duration "$duration")"
+    if [ -n "$LAST_MODEL_ID" ]; then
+        printf '  %b%-20s%b %s\n' "${DIM}" "Model:" "${RESET}" "$LAST_MODEL_ID"
+    fi
+    printf '  %b%-20s%b %s\n' "${BLUE}" "Input Tokens:" "${RESET}" "$(format_number "$current_input")"
+    printf '  %b%-20s%b %s\n' "${MAGENTA}" "Output Tokens:" "${RESET}" "$(format_number "$current_output")"
+    printf '  %b%-20s%b %s\n' "${CYAN}" "Session Duration:" "${RESET}" "$(format_duration "$duration")"
     echo ""
 }
 
@@ -681,9 +720,12 @@ parse_args() {
             COLOR_ENABLED=false
             shift
             ;;
-        --watch | -w)
-            WATCH_MODE=true
-            # Check if next argument is a number (interval)
+        --no-watch)
+            WATCH_MODE=false
+            shift
+            ;;
+        -w)
+            # Set refresh interval
             if [ $# -ge 2 ] && [[ "$2" =~ ^[0-9]+$ ]]; then
                 WATCH_INTERVAL="$2"
                 shift 2
@@ -756,10 +798,18 @@ render_once() {
     calculate_deltas
 
     # Display header
-    local session_name
+    local session_name project_name
     session_name=$(basename "$state_file" .state | sed 's/statusline\.//')
+    # Extract project name from path (last component)
+    if [ -n "$LAST_PROJECT_DIR" ]; then
+        project_name=$(basename "$LAST_PROJECT_DIR")
+    fi
     echo ""
-    echo -e "${BOLD}${MAGENTA}Context Stats${RESET} ${DIM}(Session: $session_name)${RESET}"
+    if [ -n "$project_name" ]; then
+        echo -e "${BOLD}${MAGENTA}Context Stats${RESET} ${DIM}(${CYAN}$project_name${DIM} • $session_name)${RESET}"
+    else
+        echo -e "${BOLD}${MAGENTA}Context Stats${RESET} ${DIM}(Session: $session_name)${RESET}"
+    fi
 
     # Render graphs
     case "$GRAPH_TYPE" in
@@ -796,14 +846,15 @@ render_once() {
 run_watch_mode() {
     local state_file=$1
 
-    # ANSI escape codes for cursor control
-    local CURSOR_HOME='\033[H'
-    local CLEAR_SCREEN='\033[2J'
-    local HIDE_CURSOR='\033[?25l'
-    local SHOW_CURSOR='\033[?25h'
+    # ANSI escape codes for cursor control (using $'...' for proper interpretation)
+    local CURSOR_HOME=$'\033[H'
+    local CLEAR_SCREEN=$'\033[2J'
+    local HIDE_CURSOR=$'\033[?25l'
+    local SHOW_CURSOR=$'\033[?25h'
+    local CLEAR_TO_END=$'\033[J'
 
     # Set up signal handler for clean exit
-    trap 'printf "${SHOW_CURSOR}\n${DIM}Watch mode stopped.${RESET}\n"; exit 0' INT TERM
+    trap 'printf "%s\n" "${SHOW_CURSOR}"; echo -e "${DIM}Watch mode stopped.${RESET}"; exit 0' INT TERM
 
     # Hide cursor for cleaner display
     printf "%s" "${HIDE_CURSOR}"
@@ -822,25 +873,28 @@ run_watch_mode() {
         # Show watch mode indicator with live timestamp
         local current_time
         current_time=$(date +%H:%M:%S)
-        printf "%s[LIVE %s] Refresh: %ss | Ctrl+C to exit%s\n" "${DIM}" "${current_time}" "${WATCH_INTERVAL}" "${RESET}"
+        echo -e "${DIM}[LIVE ${current_time}] Refresh: ${WATCH_INTERVAL}s | Ctrl+C to exit${RESET}"
 
+        # Handle case where state_file is empty (no sessions found at all)
+        if [ -z "$state_file" ]; then
+            show_waiting_message "" "Waiting for session data..."
         # Re-validate and render (file might have new data)
-        if [ -f "$state_file" ]; then
+        elif [ -f "$state_file" ]; then
             local line_count
             line_count=$(wc -l <"$state_file" | tr -d ' ')
             if [ "$line_count" -ge 2 ]; then
                 render_once "$state_file"
             else
-                printf "\n%sWaiting for more data points...%s\n" "${YELLOW}" "${RESET}"
-                printf "%sCurrent: %s point(s), need at least 2%s\n" "${DIM}" "$line_count" "${RESET}"
+                show_waiting_message "$SESSION_ID" "Waiting for more data points..."
+                echo -e "  ${DIM}Current: ${line_count} point(s), need at least 2${RESET}"
             fi
         else
-            printf "\n%sState file not found: %s%s\n" "${RED}" "$state_file" "${RESET}"
-            printf "%sWaiting for file to be created...%s\n" "${DIM}" "${RESET}"
+            # File doesn't exist yet (new session)
+            show_waiting_message "$SESSION_ID" "Waiting for session data..."
         fi
 
         # Clear any remaining lines from previous render (in case terminal resized smaller)
-        printf "\033[J"
+        printf "%s" "${CLEAR_TO_END}"
 
         sleep "$WATCH_INTERVAL"
     done
@@ -852,15 +906,32 @@ main() {
     get_terminal_dimensions
     load_config
 
-    # Find and validate state file
+    # Find state file
     local state_file
-    state_file=$(find_latest_state_file)
+    if ! state_file=$(find_latest_state_file); then
+        # No state files found at all
+        if [ "$WATCH_MODE" = "true" ]; then
+            # Watch mode - wait for data
+            run_watch_mode ""
+        else
+            # Single run mode - show friendly message
+            echo -e "${YELLOW}No session data found.${RESET}"
+            echo -e "${DIM}Run Claude Code to generate token usage data.${RESET}"
+            exit 0
+        fi
+        return
+    fi
 
     if [ "$WATCH_MODE" = "true" ]; then
         # Watch mode - don't exit on validation errors, keep trying
         run_watch_mode "$state_file"
     else
-        # Single run mode
+        # Single run mode - check if file exists
+        if [ ! -f "$state_file" ]; then
+            # Specific session requested but file doesn't exist yet
+            show_waiting_message "$SESSION_ID"
+            exit 0
+        fi
         validate_state_file "$state_file"
         render_once "$state_file"
     fi

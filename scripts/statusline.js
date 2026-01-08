@@ -272,20 +272,27 @@ process.stdin.on('end', () => {
             try {
                 if (fs.existsSync(stateFile)) {
                     hasPrev = true;
-                    // Read last line to get previous token count
+                    // Read last line to get previous context usage
                     const content = fs.readFileSync(stateFile, 'utf8').trim();
                     const lines = content.split('\n');
                     const lastLine = lines[lines.length - 1];
                     if (lastLine.includes(',')) {
-                        prevTokens = parseInt(lastLine.split(',')[1], 10) || 0;
+                        const parts = lastLine.split(',');
+                        // Calculate previous context usage from: cur_input + cache_creation + cache_read
+                        // CSV format: timestamp[0],total_in[1],total_out[2],cur_in[3],cur_out[4],cache_creation[5],cache_read[6],...
+                        const prevCurInput = parseInt(parts[3], 10) || 0;
+                        const prevCacheCreation = parseInt(parts[5], 10) || 0;
+                        const prevCacheRead = parseInt(parts[6], 10) || 0;
+                        prevTokens = prevCurInput + prevCacheCreation + prevCacheRead;
                     } else {
+                        // Old format - single value
                         prevTokens = parseInt(lastLine, 10) || 0;
                     }
                 }
             } catch {
                 prevTokens = 0;
             }
-            // Calculate delta
+            // Calculate delta (difference in context window usage)
             const delta = usedTokens - prevTokens;
             // Only show positive delta (and skip first run when no previous state)
             if (hasPrev && delta > 0) {

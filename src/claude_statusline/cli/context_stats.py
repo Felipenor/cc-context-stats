@@ -266,8 +266,18 @@ def run_watch_mode(
                 f"{colors.dim}[LIVE {current_time}] Refresh: {interval}s | Ctrl+C to exit{colors.reset}"
             )
 
-            # Render
-            render_once(state_file, graph_type, renderer, colors, watch_mode=True)
+            # Check if state file exists now (may have been created since start)
+            file_path = state_file.find_latest_state_file()
+            if not file_path or not file_path.exists():
+                # Show waiting message for new session
+                show_waiting_message(
+                    colors,
+                    state_file.session_id,
+                    "Waiting for session data...",
+                )
+            else:
+                # Render graphs
+                render_once(state_file, graph_type, renderer, colors, watch_mode=True)
 
             # Clear any remaining content
             sys.stdout.write(CLEAR_TO_END)
@@ -277,6 +287,35 @@ def run_watch_mode(
     finally:
         sys.stdout.write(SHOW_CURSOR)
         sys.stdout.flush()
+
+
+def show_waiting_message(
+    colors: ColorManager,
+    session_id: str | None,
+    message: str = "Waiting for session data...",
+) -> None:
+    """Show a friendly waiting message for new sessions.
+
+    Args:
+        colors: ColorManager instance
+        session_id: Session ID if specified
+        message: Message to display
+    """
+    print()
+    if session_id:
+        print(
+            f"{colors.bold}{colors.magenta}Context Stats{colors.reset} "
+            f"{colors.dim}(Session: {session_id}){colors.reset}"
+        )
+    else:
+        print(f"{colors.bold}{colors.magenta}Context Stats{colors.reset}")
+
+    print()
+    print(f"  {colors.cyan}⏳ {message}{colors.reset}")
+    print()
+    print(f"  {colors.dim}The session has just started and no data has been recorded yet.{colors.reset}")
+    print(f"  {colors.dim}Data will appear after the first Claude interaction.{colors.reset}")
+    print()
 
 
 def main() -> None:
@@ -295,14 +334,20 @@ def main() -> None:
 
     # Find state file
     file_path = state_file.find_latest_state_file()
-    if not file_path:
-        print(f"{colors.red}Error:{colors.reset} No state files found in ~/.claude/statusline/")
-        print(f"{colors.dim}Run Claude Code to generate token usage data.{colors.reset}")
-        sys.exit(1)
 
-    if not file_path.exists():
-        print(f"{colors.red}Error:{colors.reset} State file not found: {file_path}")
-        sys.exit(1)
+    # Handle case where no state file exists yet
+    if not file_path or not file_path.exists():
+        if args.no_watch:
+            # Single run mode - show friendly message and exit
+            if args.session_id:
+                show_waiting_message(colors, args.session_id)
+            else:
+                print(f"{colors.yellow}No session data found.{colors.reset}")
+                print(f"{colors.dim}Run Claude Code to generate token usage data.{colors.reset}")
+            sys.exit(0)
+        else:
+            # Watch mode - continue and wait for data
+            pass
 
     # Setup renderer
     renderer = GraphRenderer(
