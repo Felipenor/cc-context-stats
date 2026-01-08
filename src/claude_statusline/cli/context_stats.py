@@ -19,6 +19,7 @@ import argparse
 import signal
 import sys
 import time
+from pathlib import Path
 
 from claude_statusline import __version__
 from claude_statusline.core.colors import ColorManager
@@ -174,17 +175,30 @@ def render_once(
     deltas = calculate_deltas(tokens)
     delta_times = timestamps[1:]  # Deltas start from second entry
 
-    # Get session name from file path
+    # Get session name and project from entries
     file_path = state_file.find_latest_state_file()
     session_name = file_path.stem.replace("statusline.", "") if file_path else "unknown"
+
+    # Get project name from the last entry (most recent)
+    last_entry = entries[-1]
+    project_name = ""
+    if last_entry.workspace_project_dir:
+        # Extract just the project folder name from the path
+        project_name = Path(last_entry.workspace_project_dir).name
 
     # Header
     if not watch_mode:
         print()
-    print(
-        f"{colors.bold}{colors.magenta}Context Stats{colors.reset} "
-        f"{colors.dim}(Session: {session_name}){colors.reset}"
-    )
+    if project_name:
+        print(
+            f"{colors.bold}{colors.magenta}Context Stats{colors.reset} "
+            f"{colors.dim}({colors.cyan}{project_name}{colors.dim} • {session_name}){colors.reset}"
+        )
+    else:
+        print(
+            f"{colors.bold}{colors.magenta}Context Stats{colors.reset} "
+            f"{colors.dim}(Session: {session_name}){colors.reset}"
+        )
 
     # Render requested graphs
     if graph_type in ("cumulative", "both", "all"):
