@@ -702,9 +702,11 @@ render_summary() {
             status_text="WRAP UP ZONE"
             status_hint="Better to wrap up and start a new session"
         fi
+        # Context remaining (before status)
+        printf '  %b%-20s%b %s/%s (%s%%)\n' "${status_color}" "Context Remaining:" "${RESET}" "$(format_number "$remaining_context")" "$(format_number "$current_context")" "$context_percentage"
+        # Status indicator
         printf '  %b%b>>> %s <<<%b %b(%s)%b\n' "${status_color}" "${BOLD}" "$status_text" "${RESET}" "${DIM}" "$status_hint" "${RESET}"
         echo ""
-        printf '  %b%-20s%b %s/%s (%s%%)\n' "${status_color}" "Context Remaining:" "${RESET}" "$(format_number "$remaining_context")" "$(format_number "$current_context")" "$context_percentage"
     fi
     printf '  %b%-20s%b %s\n' "${CYAN}" "Session Duration:" "${RESET}" "$(format_duration "$duration")"
     if [ -n "$LAST_MODEL_ID" ]; then

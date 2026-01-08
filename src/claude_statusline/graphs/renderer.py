@@ -283,6 +283,13 @@ class GraphRenderer:
         line_width = self.dimensions.graph_width + 11
         print(f"{self.colors.dim}{'-' * line_width}{self.colors.reset}")
 
+        # Context remaining (before status)
+        if last.context_window_size > 0:
+            print(
+                f"  {status_color}{'Context Remaining:':<20}{self.colors.reset} "
+                f"{format_tokens(remaining_context, self.token_detail)}/{format_tokens(last.context_window_size, self.token_detail)} ({remaining_percentage}%)"
+            )
+
         # Status indicator - highlighted
         if last.context_window_size > 0:
             print(
@@ -291,12 +298,7 @@ class GraphRenderer:
             )
             print()
 
-        if last.context_window_size > 0:
-            # Color the remaining context based on status
-            print(
-                f"  {status_color}{'Context Remaining:':<20}{self.colors.reset} "
-                f"{format_tokens(remaining_context, self.token_detail)}/{format_tokens(last.context_window_size, self.token_detail)} ({remaining_percentage}%)"
-            )
+        # Session details
         print(
             f"  {self.colors.cyan}{'Session Duration:':<20}{self.colors.reset} "
             f"{format_duration(duration)}"
