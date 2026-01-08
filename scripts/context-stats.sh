@@ -294,7 +294,6 @@ load_token_history() {
     OUTPUT_TOKENS=""
     CONTEXT_SIZES=""
     CURRENT_USED_TOKENS=""
-    CACHE_CREATION_TOKENS=""
     CURRENT_OUTPUT_TOKENS=""
     LAST_MODEL_ID=""
     LAST_PROJECT_DIR=""
@@ -365,7 +364,6 @@ load_token_history() {
             OUTPUT_TOKENS="$total_out"
             CONTEXT_SIZES="$context_size"
             CURRENT_USED_TOKENS="$current_used"
-            CACHE_CREATION_TOKENS="$cache_creation"
             CURRENT_OUTPUT_TOKENS="$cur_out"
         else
             TIMESTAMPS="$TIMESTAMPS $ts"
@@ -374,7 +372,6 @@ load_token_history() {
             OUTPUT_TOKENS="$OUTPUT_TOKENS $total_out"
             CONTEXT_SIZES="$CONTEXT_SIZES $context_size"
             CURRENT_USED_TOKENS="$CURRENT_USED_TOKENS $current_used"
-            CACHE_CREATION_TOKENS="$CACHE_CREATION_TOKENS $cache_creation"
             CURRENT_OUTPUT_TOKENS="$CURRENT_OUTPUT_TOKENS $cur_out"
         fi
         # Store model_id and project_dir (last ones will be kept)
@@ -827,7 +824,7 @@ render_once() {
         render_timeseries_graph "Context Growth Per Interaction" "$DELTAS" "$DELTA_TIMES" "$CYAN"
         ;;
     io)
-        render_timeseries_graph "New Input (cache creation)" "$CACHE_CREATION_TOKENS" "$TIMESTAMPS" "$BLUE"
+        render_timeseries_graph "Input Tokens (context usage)" "$CURRENT_USED_TOKENS" "$TIMESTAMPS" "$BLUE"
         render_timeseries_graph "Output Tokens (per response)" "$CURRENT_OUTPUT_TOKENS" "$TIMESTAMPS" "$MAGENTA"
         ;;
     both)
@@ -835,7 +832,7 @@ render_once() {
         render_timeseries_graph "Context Growth Per Interaction" "$DELTAS" "$DELTA_TIMES" "$CYAN"
         ;;
     all)
-        render_timeseries_graph "New Input (cache creation)" "$CACHE_CREATION_TOKENS" "$TIMESTAMPS" "$BLUE"
+        render_timeseries_graph "Input Tokens (context usage)" "$CURRENT_USED_TOKENS" "$TIMESTAMPS" "$BLUE"
         render_timeseries_graph "Output Tokens (per response)" "$CURRENT_OUTPUT_TOKENS" "$TIMESTAMPS" "$MAGENTA"
         render_timeseries_graph "Context Usage Over Time" "$CURRENT_USED_TOKENS" "$TIMESTAMPS" "$GREEN"
         render_timeseries_graph "Context Growth Per Interaction" "$DELTAS" "$DELTA_TIMES" "$CYAN"
