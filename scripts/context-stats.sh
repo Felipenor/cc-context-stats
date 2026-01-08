@@ -298,6 +298,9 @@ load_token_history() {
     CURRENT_OUTPUT_TOKENS=""
     LAST_MODEL_ID=""
     LAST_PROJECT_DIR=""
+    LAST_COST_USD=""
+    LAST_LINES_ADDED=""
+    LAST_LINES_REMOVED=""
     DATA_COUNT=0
 
     while IFS=',' read -r ts total_in total_out cur_in cur_out cache_creation cache_read cost_usd lines_added lines_removed session_id model_id workspace_project_dir context_size rest || [ -n "$ts" ]; do
@@ -377,9 +380,12 @@ load_token_history() {
             CURRENT_INPUT_TOKENS="$CURRENT_INPUT_TOKENS $cur_in"
             CURRENT_OUTPUT_TOKENS="$CURRENT_OUTPUT_TOKENS $cur_out"
         fi
-        # Store model_id and project_dir (last ones will be kept)
+        # Store last values (will be kept)
         LAST_MODEL_ID="$model_id"
         LAST_PROJECT_DIR="$workspace_project_dir"
+        LAST_COST_USD="$cost_usd"
+        LAST_LINES_ADDED="$lines_added"
+        LAST_LINES_REMOVED="$lines_removed"
         valid_lines=$((valid_lines + 1))
     done <"$file"
 
@@ -706,6 +712,15 @@ render_summary() {
     printf '  %b%-20s%b %s\n' "${BLUE}" "Input Tokens:" "${RESET}" "$(format_number "$current_input")"
     printf '  %b%-20s%b %s\n' "${MAGENTA}" "Output Tokens:" "${RESET}" "$(format_number "$current_output")"
     printf '  %b%-20s%b %s\n' "${CYAN}" "Session Duration:" "${RESET}" "$(format_duration "$duration")"
+    # Cost
+    if [ -n "$LAST_COST_USD" ] && [ "$LAST_COST_USD" != "0" ]; then
+        printf '  %b%-20s%b $%s\n' "${YELLOW}" "Total Cost:" "${RESET}" "$LAST_COST_USD"
+    fi
+    # Lines changed
+    if [ -n "$LAST_LINES_ADDED" ] && [ "$LAST_LINES_ADDED" != "0" ] || [ -n "$LAST_LINES_REMOVED" ] && [ "$LAST_LINES_REMOVED" != "0" ]; then
+        printf '  %b%-20s%b +%s\n' "${GREEN}" "Lines Added:" "${RESET}" "$(format_number "$LAST_LINES_ADDED")"
+        printf '  %b%-20s%b -%s\n' "${RED}" "Lines Removed:" "${RESET}" "$(format_number "$LAST_LINES_REMOVED")"
+    fi
     echo ""
 }
 

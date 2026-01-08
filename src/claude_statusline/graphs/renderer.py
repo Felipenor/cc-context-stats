@@ -314,6 +314,22 @@ class GraphRenderer:
             f"  {self.colors.cyan}{'Session Duration:':<20}{self.colors.reset} "
             f"{format_duration(duration)}"
         )
+        # Cost
+        if last.cost_usd > 0:
+            print(
+                f"  {self.colors.yellow}{'Total Cost:':<20}{self.colors.reset} "
+                f"${last.cost_usd:.4f}"
+            )
+        # Lines changed
+        if last.lines_added > 0 or last.lines_removed > 0:
+            print(
+                f"  {self.colors.green}{'Lines Added:':<20}{self.colors.reset} "
+                f"+{last.lines_added:,}"
+            )
+            print(
+                f"  {self.colors.red}{'Lines Removed:':<20}{self.colors.reset} "
+                f"-{last.lines_removed:,}"
+            )
         print()
 
     def render_footer(self, version: str = "1.0.0", commit_hash: str = "dev") -> None:
