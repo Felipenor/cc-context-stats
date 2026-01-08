@@ -170,10 +170,11 @@ def render_once(
     # Extract data for graphs
     timestamps = [e.timestamp for e in entries]
     tokens = [e.total_tokens for e in entries]
-    input_tokens = [e.total_input_tokens for e in entries]
-    output_tokens = [e.total_output_tokens for e in entries]
     # Current context window usage (what's actually in the context)
     context_used = [e.current_used_tokens for e in entries]
+    # Context window components (for I/O graphs)
+    cache_read = [e.cache_read for e in entries]
+    cache_creation = [e.cache_creation for e in entries]
     deltas = calculate_deltas(context_used)
     delta_times = timestamps[1:]  # Deltas start from second entry
 
@@ -212,8 +213,8 @@ def render_once(
         )
 
     if graph_type in ("io", "all"):
-        renderer.render_timeseries(input_tokens, timestamps, "Input Tokens (↓)", colors.blue)
-        renderer.render_timeseries(output_tokens, timestamps, "Output Tokens (↑)", colors.magenta)
+        renderer.render_timeseries(cache_read, timestamps, "Cache Read (from context)", colors.blue)
+        renderer.render_timeseries(cache_creation, timestamps, "Cache Creation (new content)", colors.magenta)
 
     # Summary and footer
     renderer.render_summary(entries, deltas)
