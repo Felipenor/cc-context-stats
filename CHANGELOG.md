@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.2] - 2025-01-08
+
+### Fixed
+
+- Fixed remaining context showing negative values in token-graph by using `current_used_tokens` instead of cumulative `total_input_tokens + total_output_tokens`
+- Fixed ANSI escape codes not rendering properly in watch mode by using `sys.stdout.write()` instead of `print()` for cursor control sequences
+- Fixed color codes in summary statistics using ColorManager instead of raw ANSI constants
+
+## [1.0.1] - 2025-01-07
+
+### Added
+
+- pip/uv installable Python package (`cc-statusline` on PyPI)
+- `context_window_size` field to state file for tracking remaining context
+- Remaining context display in token-graph summary
+
+### Fixed
+
+- Restored executable permissions on script files
+- Fixed stdin detection in pipe mode using INTERACTIVE flag
+
+### Changed
+
+- Cleaned up unused `show_io_tokens` option
+- Fixed shellcheck warnings in shell scripts
+
+## [1.0.0] - 2025-01-06
+
 ### Added
 
 - Comprehensive test suite with Bats (Bash), pytest (Python), and Jest (Node.js)
@@ -17,15 +45,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CONTRIBUTING.md with development setup instructions
 - Dependabot configuration for automated dependency updates
 - Release automation workflow
-
-### Changed
-
-- Updated project structure to follow best practices
-
-## [1.0.0] - Initial Release
-
-### Added
-
 - Full-featured status line script (`statusline-full.sh`)
 - Git-aware status line script (`statusline-git.sh`)
 - Minimal status line script (`statusline-minimal.sh`)
@@ -36,3 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Autocompact (AC) buffer indicator
 - Context window usage with color-coded percentages
 - Git branch and uncommitted changes display
+
+## [0.x] - Pre-release
+
+Initial development versions with basic status line functionality.
