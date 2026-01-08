@@ -636,17 +636,30 @@ render_summary() {
     done
     printf "%s\n" "${RESET}"
 
-    printf "  ${CYAN}%-20s${RESET} %s\n" "Context Used:" "$(format_number "$current_tokens")"
+    # Determine status zone based on context usage
     if [ "$current_context" -gt 0 ]; then
-        printf "  ${GREEN}%-20s${RESET} %s (%s%%)\n" "Context Remaining:" "$(format_number "$remaining_context")" "$context_percentage"
+        local usage_percentage=$((100 - context_percentage))
+        local status_color status_text status_hint
+        if [ "$usage_percentage" -lt 40 ]; then
+            status_color="${GREEN}"
+            status_text="SMART ZONE"
+            status_hint="You are in the smart zone"
+        elif [ "$usage_percentage" -lt 80 ]; then
+            status_color="${YELLOW}"
+            status_text="DUMB ZONE"
+            status_hint="You are in the dumb zone - Dex Horthy says so"
+        else
+            status_color="${RED}"
+            status_text="WRAP UP ZONE"
+            status_hint="Better to wrap up and start a new session"
+        fi
+        printf "  %s%s>>> %s <<<%s %s(%s)%s\n" "${status_color}" "${BOLD}" "$status_text" "${RESET}" "${DIM}" "$status_hint" "${RESET}"
+        echo ""
+        printf "  %s%-20s%s %s (%s%%)\n" "${status_color}" "Context Remaining:" "${RESET}" "$(format_number "$remaining_context")" "$context_percentage"
     fi
     printf "  ${BLUE}%-20s${RESET} %s\n" "Input Tokens:" "$(format_number "$current_input")"
     printf "  ${MAGENTA}%-20s${RESET} %s\n" "Output Tokens:" "$(format_number "$current_output")"
     printf "  ${CYAN}%-20s${RESET} %s\n" "Session Duration:" "$(format_duration "$duration")"
-    printf "  ${CYAN}%-20s${RESET} %s\n" "Data Points:" "$DATA_COUNT"
-    printf "  ${CYAN}%-20s${RESET} %s\n" "Avg Growth:" "$(format_number "$del_avg")"
-    printf "  ${CYAN}%-20s${RESET} %s\n" "Max Growth:" "$(format_number "$del_max")"
-    printf "  ${CYAN}%-20s${RESET} %s\n" "Total Growth:" "$(format_number "$total_growth")"
     echo ""
 }
 

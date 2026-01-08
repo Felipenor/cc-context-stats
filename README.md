@@ -41,10 +41,16 @@ uv pip install cc-context-stats
 
 ### Real-Time Monitoring
 
-Simply run:
+Get your session ID from the status line (the last part after the pipe `|`), then run:
 
 ```bash
-context-stats
+context-stats <session_id>
+```
+
+For example:
+
+```bash
+context-stats abc123def-456-789
 ```
 
 This opens a live dashboard that refreshes every 2 seconds, showing:
