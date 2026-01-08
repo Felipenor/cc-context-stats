@@ -252,10 +252,6 @@ class GraphRenderer:
         first = entries[0]
         last = entries[-1]
         duration = last.timestamp - first.timestamp
-        total_growth = last.total_tokens - first.total_tokens
-
-        # Delta statistics
-        delta_stats = calculate_stats(deltas) if deltas else Stats(0, 0, 0, 0, 0)
 
         # Context window info - use current_used_tokens which represents actual context usage
         remaining_context = 0
@@ -287,17 +283,14 @@ class GraphRenderer:
         line_width = self.dimensions.graph_width + 11
         print(f"{self.colors.dim}{'-' * line_width}{self.colors.reset}")
 
-        # Status indicator at the top
+        # Status indicator - highlighted
         if last.context_window_size > 0:
             print(
-                f"  {status_color}{self.colors.bold}{'Status:':<20}{status_text}{self.colors.reset} "
+                f"  {status_color}{self.colors.bold}>>> {status_text.upper()} <<<{self.colors.reset} "
                 f"{self.colors.dim}({status_hint}){self.colors.reset}"
             )
+            print()
 
-        print(
-            f"  {self.colors.cyan}{'Context Used:':<20}{self.colors.reset} "
-            f"{format_tokens(last.total_tokens, self.token_detail)} ({usage_percentage}%)"
-        )
         if last.context_window_size > 0:
             # Color the remaining context based on status
             print(
@@ -315,19 +308,6 @@ class GraphRenderer:
         print(
             f"  {self.colors.cyan}{'Session Duration:':<20}{self.colors.reset} "
             f"{format_duration(duration)}"
-        )
-        print(f"  {self.colors.cyan}{'Data Points:':<20}{self.colors.reset} " f"{len(entries)}")
-        print(
-            f"  {self.colors.cyan}{'Avg Growth:':<20}{self.colors.reset} "
-            f"{format_tokens(delta_stats.avg_val, self.token_detail)}"
-        )
-        print(
-            f"  {self.colors.cyan}{'Max Growth:':<20}{self.colors.reset} "
-            f"{format_tokens(delta_stats.max_val, self.token_detail)}"
-        )
-        print(
-            f"  {self.colors.cyan}{'Total Growth:':<20}{self.colors.reset} "
-            f"{format_tokens(total_growth, self.token_detail)}"
         )
         print()
 
