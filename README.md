@@ -171,7 +171,6 @@ The `claude-statusline` command still works. The main change is `token-graph` is
 ## Related
 
 - [Claude Code Documentation](https://docs.anthropic.com/en/docs/claude-code)
-- [Dex Horthy on Context Windows](https://twitter.com/daborhty) - The "dumb zone" concept
 - [Blog: Building this project](https://medium.com/@luongnv89/closing-the-gap-between-mvp-and-production-with-feature-dev-an-official-plugin-from-anthropic-444e2f00a0ad)
 
 ## License
