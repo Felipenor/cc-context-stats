@@ -1,11 +1,27 @@
 #!/bin/bash
 #
-# Claude Code Status Line Installer
-# Installs and configures a status line for Claude Code
+# Claude Code Context Stats Installer
+# Installs and configures context monitoring for Claude Code
+#
+# Features:
+#   - Real-time context usage monitoring (status line integration)
+#   - Live dashboard with context-stats CLI tool
+#   - Automatic detection of Smart Zone, Dumb Zone, and Wrap Up Zone
+#   - Local data storage in ~/.claude/statusline/
 #
 # Usage:
 #   Local:  ./install.sh
 #   Remote: curl -fsSL https://raw.githubusercontent.com/luongnv89/cc-context-stats/main/install.sh | bash
+#
+# Requirements:
+#   - curl (for remote installation)
+#   - jq (for JSON configuration, optional but recommended)
+#
+# What gets installed:
+#   - ~/.claude/statusline.sh - Status line command
+#   - ~/.local/bin/context-stats - CLI tool for live context monitoring
+#   - ~/.claude/statusline.conf - Configuration file
+#   - ~/.claude/settings.json - Claude Code settings updated
 #
 
 set -e
