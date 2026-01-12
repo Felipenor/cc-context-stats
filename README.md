@@ -29,6 +29,14 @@ When working with Claude Code on complex tasks, you can easily burn through your
 
 ## Installation
 
+### Shell Script
+
+For the quickest setup:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/luongnv89/cc-context-stats/main/install.sh | bash
+```
+
 ### NPM
 
 ```bash
@@ -151,14 +159,6 @@ token_detail=true   # Show exact token counts (vs abbreviated like "12.5k")
 show_delta=true     # Show token delta in status line
 show_session=true   # Show session ID
 autocompact=true    # Show autocompact buffer indicator
-```
-
-## Shell Script Installation
-
-For users who prefer shell scripts:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/luongnv89/cc-context-stats/main/install.sh | bash
 ```
 
 ## How It Works
