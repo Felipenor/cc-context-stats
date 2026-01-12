@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Package Metadata** - Synchronized package descriptions across npm and PyPI for consistency
 - **Keywords** - Aligned keywords across npm and Python packages for better discoverability
+- **Installation Section** - Moved shell script installation to the top of README as the recommended method
+- **Install Script Documentation** - Enhanced `install.sh` with comprehensive header documentation including:
+  - Features overview (real-time monitoring, live dashboard, zone detection)
+  - Requirements (curl, jq)
+  - Installation destinations and file descriptions
 
 ## [1.2.0] - 2025-01-08
 
