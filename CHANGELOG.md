@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **NPM Package** - `cc-context-stats` now available on npm for JavaScript/Node.js environments
+  - Install via `npm install -g cc-context-stats` or `yarn global add cc-context-stats`
+  - Provides same functionality as Python package for Node.js users
+- **Enhanced Documentation** - Updated README with npm installation instructions and badges
+
+### Changed
+
+- **Package Metadata** - Synchronized package descriptions across npm and PyPI for consistency
+- **Keywords** - Aligned keywords across npm and Python packages for better discoverability
+
 ## [1.2.0] - 2025-01-08
 
 ### Added
